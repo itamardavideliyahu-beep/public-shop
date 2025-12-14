@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+
+{% block title %}Search Users - Public Shop{% endblock %}
+
+{% block content %}
+  <div class="row justify-content-center">
+    <div class="col-12 col-lg-8">
+      <h1 class="h4 mb-4">
+        <i class="bi bi-search me-2"></i>Search Users
+      </h1>
+
+      <!-- Search Form -->
+      <div class="card shadow-sm mb-4">
+        <div class="card-body">
+          <form method="get" action="{{ url_for('main.search_users') }}" class="d-flex gap-2 w-100">
+            <input
+              type="text"
+              name="q"
+              class="form-control"
+              placeholder="Search by name..."
+              value="{{ query }}"
+              autofocus
+              style="max-width: 100%; box-sizing: border-box; flex: 1; min-width: 0;"
+            >
+            <button type="submit" class="btn btn-hero flex-shrink-0">
+              <i class="bi bi-search me-1"></i> Search
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Search Results -->
+      {% if query %}
+        {% if users %}
+          <div class="card shadow-sm">
+            <div class="card-body">
+              <h2 class="h6 mb-3">
+                Found {{ users|length }} user{{ 's' if users|length != 1 else '' }}
+              </h2>
+              <div class="list-group list-group-flush">
+                {% for user in users %}
+                  <div class="list-group-item search-result-item d-flex align-items-center justify-content-between px-0">
+                    <div class="d-flex align-items-center gap-3">
+                      <a href="{{ url_for('main.profile', user_id=user.id) }}" class="text-decoration-none">
+                        {% if user.avatar_filename %}
+                          <img
+                            src="{{ url_for('static', filename='uploads/avatars/' ~ user.avatar_filename) }}"
+                            alt="{{ user.username if user.username else user.display_name }}"
+                            class="avatar-circle-sm"
+                          >
+                        {% else %}
+                          <div class="avatar-circle-sm placeholder">
+                            {{ (user.username if user.username else user.display_name)[:1].upper() }}
+                          </div>
+                        {% endif %}
+                      </a>
+                      <div>
+                        <a
+                          href="{{ url_for('main.profile', user_id=user.id) }}"
+                          class="text-decoration-none fw-semibold text-dark"
+                        >
+                          {{ user.username if user.username else user.display_name }}
+                        </a>
+                        {% if user.bio %}
+                          <div class="text-muted small text-truncate" style="max-width: 300px;">
+                            {{ user.bio }}
+                          </div>
+                        {% endif %}
+                        <div class="text-muted small">
+                          <span>{{ user.listings.count() }} listings</span>
+                          <span class="mx-1">·</span>
+                          <span>{{ user.listings.filter_by(status='active').count() }} listings</span>
+                          <span class="mx-1">·</span>
+                          <span>{{ user.followers.count() }} followers</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="d-flex gap-2">
+                      {% if current_user.id != user.id %}
+                        {% if current_user.is_following(user) %}
+                          <form
+                            method="post"
+                            action="{{ url_for('main.unfollow', user_id=user.id) }}"
+                            class="d-inline"
+                          >
+                            <input type="hidden" name="next" value="{{ request.url }}">
+                            <button type="submit" class="btn btn-outline-secondary btn-sm">
+                              <i class="bi bi-person-check me-1"></i> Following
+                            </button>
+                          </form>
+                        {% else %}
+                          <form
+                            method="post"
+                            action="{{ url_for('main.follow', user_id=user.id) }}"
+                            class="d-inline"
+                          >
+                            <input type="hidden" name="next" value="{{ request.url }}">
+                            <button type="submit" class="btn btn-hero btn-sm">
+                              <i class="bi bi-person-plus me-1"></i> Follow
+                            </button>
+                          </form>
+                        {% endif %}
+                        <form
+                          method="post"
+                          action="{{ url_for('main.start_conversation_with_user', user_id=user.id) }}"
+                          class="d-inline"
+                        >
+                          <button type="submit" class="btn btn-outline-primary btn-sm">
+                            <i class="bi bi-envelope me-1"></i> Message
+                          </button>
+                        </form>
+                      {% endif %}
+                    </div>
+                  </div>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+        {% else %}
+          <div class="card shadow-sm">
+            <div class="card-body text-center py-5">
+              <i class="bi bi-search display-4 text-muted mb-3"></i>
+              <p class="text-muted mb-0">
+                No users found matching "{{ query }}"
+              </p>
+            </div>
+          </div>
+        {% endif %}
+      {% else %}
+        <div class="card shadow-sm">
+          <div class="card-body text-center py-5">
+            <i class="bi bi-search display-4 text-muted mb-3"></i>
+            <p class="text-muted mb-0">
+              Enter a name above to search for users
+            </p>
+          </div>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+{% endblock %}
+

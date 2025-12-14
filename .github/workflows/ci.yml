@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
+        run: |
+          python -m venv venv
+          source venv/bin/activate
+          pip install -r requirements.txt
+          python -m playwright install --with-deps
+
+      - name: Run dev_check with Flask server
+        run: |
+          source venv/bin/activate
+          chmod +x dev_check.sh
+          # Start the Flask app in the background
+          python run.py &
+          SERVER_PID=$!
+          # Give the server a few seconds to start
+          sleep 5
+          # Run the same checks you use locally
+          ./dev_check.sh
+          # Stop the server (ignore error if already stopped)
+          kill $SERVER_PID || true

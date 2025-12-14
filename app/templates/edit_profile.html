@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+{% block title %}Edit profile - Public Shop{% endblock %}
+
+{% block content %}
+    <div class="row justify-content-center mx-0">
+        <div class="col-12 col-sm-11 col-md-10 col-lg-10 col-xl-9 px-3 px-md-4">
+            <div class="card shadow-sm border-0 auth-card">
+                <div class="card-header border-0 text-center py-4 py-md-5 auth-card-header">
+                    <h1 class="h2 mb-2" style="font-size: 2rem;">Edit your profile</h1>
+                    <p class="text-white mb-0" style="opacity: 0.95; font-size: 1.1rem;">
+                        Update your display name, bio, and avatar image.
+                    </p>
+                </div>
+                <div class="card-body p-4 p-md-5">
+                    {% with messages = get_flashed_messages(with_categories=True) %}
+                        {% if messages %}
+                            <div class="mb-4">
+                                {% for category, message in messages %}
+                                    <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show mb-2" role="alert" style="font-size: 1.1rem; padding: 1rem 1.5rem;">
+                                        {{ message }}
+                                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close" style="font-size: 0.875rem;"></button>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    {% endwith %}
+
+                    <form method="post" enctype="multipart/form-data" class="w-100">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                        <div class="mb-4 text-center">
+                            {% if current_user.avatar_filename %}
+                                <img
+                                    src="{{ url_for('static', filename='uploads/avatars/' ~ current_user.avatar_filename) }}"
+                                    alt="{{ current_user.username if current_user.username else current_user.display_name }}"
+                                    class="profile-avatar-large mb-2"
+                                    style="max-width: 100%; height: auto;"
+                                >
+                            {% else %}
+                                <div class="profile-avatar-large placeholder mb-2">
+                                    {{ (current_user.username if current_user.username else current_user.display_name)[:1].upper() }}
+                                </div>
+                            {% endif %}
+                            <p class="mb-0" style="color: #667eea; font-weight: 600; font-size: 1.1rem;">
+                                Current avatar
+                            </p>
+                        </div>
+
+                        <div class="row g-4">
+                            <div class="col-12 col-md-6">
+                                <div class="mb-3">
+                                    <label for="display_name" class="form-label">Display name</label>
+                                    <input
+                                        id="display_name"
+                                        name="display_name"
+                                        type="text"
+                                        class="form-control"
+                                        value="{{ current_user.display_name }}"
+                                        style="max-width: 100%; box-sizing: border-box;"
+                                        required
+                                    >
+                                </div>
+                            </div>
+
+                            <div class="col-12 col-md-6">
+                                <div class="mb-3">
+                                    <label for="avatar" class="form-label">
+                                        Avatar image (optional)
+                                    </label>
+                                    <input
+                                        id="avatar"
+                                        name="avatar"
+                                        type="file"
+                                        accept="image/*"
+                                        class="form-control"
+                                        style="max-width: 100%; box-sizing: border-box;"
+                                    >
+                                </div>
+                            </div>
+
+                            <div class="col-12">
+                                <div class="mb-3">
+                                    <label for="bio" class="form-label">Bio</label>
+                                    <textarea
+                                        id="bio"
+                                        name="bio"
+                                        rows="3"
+                                        class="form-control"
+                                        style="max-width: 100%; box-sizing: border-box; resize: vertical;"
+                                    >{{ current_user.bio or "" }}</textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-hero w-100 mb-3" style="padding: 1rem 2rem; font-size: 1.1rem; min-height: 50px;">
+                            <i class="bi bi-check-circle me-2"></i> Save changes
+                        </button>
+
+                        <p class="text-center mb-0" style="color: #667eea; font-weight: 600; font-size: 1.1rem;">
+                            <a href="{{ url_for('main.profile', user_id=current_user.id) }}" style="color: #764ba2; font-weight: 700; text-decoration: none; font-size: 1.1rem;">
+                                View public profile
+                            </a>
+                        </p>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

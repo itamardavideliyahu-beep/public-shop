@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}Following - Public Shop{% endblock %}
+
+{% block content %}
+    <h1 class="h4 mb-3">People you follow</h1>
+
+    {% if users %}
+        <p class="text-muted small mb-3">
+            You are following {{ users|length }} user{{ '' if users|length == 1 else 's' }}.
+        </p>
+
+        <div class="row row-cols-1 row-cols-md-2 g-3">
+            {% for u in users %}
+                <div class="col">
+                    <article class="card shadow-sm h-100">
+                        <div class="card-body d-flex align-items-center gap-3">
+                            {% if u.avatar_filename %}
+                                <img
+                                    src="{{ url_for('static', filename='uploads/avatars/' ~ u.avatar_filename) }}"
+                                    alt="{{ u.username if u.username else u.display_name }}"
+                                    class="avatar-circle-sm"
+                                >
+                            {% else %}
+                                <div class="avatar-circle-sm placeholder">
+                                    {{ (u.username if u.username else u.display_name)[:1].upper() }}
+                                </div>
+                            {% endif %}
+                            <div class="flex-grow-1">
+                                <h2 class="h6 mb-1">
+                                    <a
+                                        href="{{ url_for('main.profile', user_id=u.id) }}"
+                                        class="text-decoration-none"
+                                    >
+                                        {{ u.username if u.username else u.display_name }}
+                                    </a>
+                                </h2>
+                                <p class="text-muted small mb-2">
+                                    Followers: {{ u.followers.count() }}
+                                </p>
+                                <form
+                                    method="post"
+                                    action="{{ url_for('main.unfollow', user_id=u.id) }}"
+                                >
+                                    <button
+                                        type="submit"
+                                        class="btn btn-sm btn-outline-secondary"
+                                    >
+                                        Unfollow
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </article>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p class="text-muted">
+            You are not following anyone yet.
+        </p>
+    {% endif %}
+{% endblock %}

@@ -1,0 +1,107 @@
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:15-alpine
+    container_name: public_shop_db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-publicshop}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+      POSTGRES_DB: ${POSTGRES_DB:-public_shop}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-publicshop}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - public_shop_network
+    restart: unless-stopped
+
+  # Redis for caching and rate limiting
+  redis:
+    image: redis:7-alpine
+    container_name: public_shop_redis
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - public_shop_network
+    restart: unless-stopped
+
+  # Flask Application
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: public_shop_web
+    environment:
+      # Flask Configuration
+      FLASK_ENV: production
+      FLASK_DEBUG: "False"
+      SECRET_KEY: ${SECRET_KEY}
+      
+      # Database (PostgreSQL in Docker)
+      DATABASE_URL: postgresql://${POSTGRES_USER:-publicshop}:${POSTGRES_PASSWORD:-changeme}@db:5432/${POSTGRES_DB:-public_shop}
+      
+      # Email Configuration
+      MAIL_SERVER: ${MAIL_SERVER:-smtp.gmail.com}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_USE_TLS: ${MAIL_USE_TLS:-True}
+      MAIL_USERNAME: ${MAIL_USERNAME}
+      MAIL_PASSWORD: ${MAIL_PASSWORD}
+      MAIL_DEFAULT_SENDER: ${MAIL_DEFAULT_SENDER:-noreply@publicshop.com}
+      
+      # Security
+      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-True}
+      SESSION_LIFETIME: ${SESSION_LIFETIME:-86400}
+      
+      # Rate Limiting (Redis)
+      RATELIMIT_STORAGE_URL: redis://redis:6379/0
+      
+      # Caching (Redis)
+      CACHE_TYPE: RedisCache
+      CACHE_REDIS_URL: redis://redis:6379/0
+      CACHE_DEFAULT_TIMEOUT: ${CACHE_DEFAULT_TIMEOUT:-300}
+      
+      # SocketIO
+      SOCKETIO_CORS_ALLOWED_ORIGINS: ${SOCKETIO_CORS_ALLOWED_ORIGINS:-*}
+      
+      # Pagination
+      POSTS_PER_PAGE: ${POSTS_PER_PAGE:-20}
+      LISTINGS_PER_PAGE: ${LISTINGS_PER_PAGE:-20}
+      
+      # File Uploads
+      MAX_IMAGE_SIZE: ${MAX_IMAGE_SIZE:-5242880}
+    ports:
+      - "${APP_PORT:-8000}:8000"
+    volumes:
+      - ./app/static/uploads:/app/app/static/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - public_shop_network
+    restart: unless-stopped
+    command: gunicorn --worker-class eventlet -w 4 -b 0.0.0.0:8000 --timeout 120 wsgi:app
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  public_shop_network:
+    driver: bridge
+

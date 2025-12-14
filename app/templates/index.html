@@ -1,0 +1,345 @@
+{% extends "base.html" %}
+
+{% block title %}Home - Public Shop{% endblock %}
+
+{% block content %}
+    {% if not current_user.is_authenticated %}
+    <!-- Hero section - Modern Design -->
+    <section class="hero mb-4">
+        <div class="text-center">
+            <div class="hero-badge mb-3">
+                <i class="bi bi-shop me-2"></i>Social Marketplace
+            </div>
+            <h1 class="mb-3">
+                Connect, Share, and Shop
+            </h1>
+            <p class="mb-4" style="font-size: 1.125rem; opacity: 0.9;">
+                Public Shop - Your vibrant marketplace!<br>
+                Follow users and discover amazing offers in one colorful place.
+            </p>
+            <a
+                href="{{ url_for('auth.register') }}"
+                class="btn btn-hero btn-lg px-5"
+            >
+                Get Started
+            </a>
+        </div>
+    </section>
+    {% endif %}
+
+    <!-- Category row (round buttons for filtering offers) - Colorful -->
+    <section class="mb-5" style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%); padding: 2rem; border-radius: 20px; box-shadow: 0 4px 16px rgba(102, 126, 234, 0.1);">
+        <div class="d-flex flex-wrap justify-content-center gap-4 category-row">
+            <a
+                href="{{ url_for('main.index', view=current_view if current_user.is_authenticated else 'all') }}"
+                class="category-link-wrap"
+            >
+                <div class="category-chip {% if not current_category %}category-chip-active{% endif %}">
+                    <span class="category-icon">🌐</span>
+                    <span class="category-label">All offers</span>
+                </div>
+            </a>
+
+            <a
+                href="{{ url_for('main.index', category='real_estate', view=current_view if current_user.is_authenticated else 'all') }}"
+                class="category-link-wrap"
+            >
+                <div class="category-chip {% if current_category == 'real_estate' %}category-chip-active{% endif %}">
+                    <span class="category-icon">🏠</span>
+                    <span class="category-label">Real estate</span>
+                </div>
+            </a>
+
+            <a
+                href="{{ url_for('main.index', category='cars', view=current_view if current_user.is_authenticated else 'all') }}"
+                class="category-link-wrap"
+            >
+                <div class="category-chip {% if current_category == 'cars' %}category-chip-active{% endif %}">
+                    <span class="category-icon">🚗</span>
+                    <span class="category-label">Cars</span>
+                </div>
+            </a>
+
+            <a
+                href="{{ url_for('main.index', category='electronics', view=current_view if current_user.is_authenticated else 'all') }}"
+                class="category-link-wrap"
+            >
+                <div class="category-chip {% if current_category == 'electronics' %}category-chip-active{% endif %}">
+                    <span class="category-icon">📱</span>
+                    <span class="category-label">Electronics</span>
+                </div>
+            </a>
+
+            <a
+                href="{{ url_for('main.index', category='furniture', view=current_view if current_user.is_authenticated else 'all') }}"
+                class="category-link-wrap"
+            >
+                <div class="category-chip {% if current_category == 'furniture' %}category-chip-active{% endif %}">
+                    <span class="category-icon">🛋️</span>
+                    <span class="category-label">Furniture</span>
+                </div>
+            </a>
+
+            <a
+                href="{{ url_for('main.index', category='pets', view=current_view if current_user.is_authenticated else 'all') }}"
+                class="category-link-wrap"
+            >
+                <div class="category-chip {% if current_category == 'pets' %}category-chip-active{% endif %}">
+                    <span class="category-icon">🐾</span>
+                    <span class="category-label">Pets</span>
+                </div>
+            </a>
+
+            <a
+                href="{{ url_for('main.index', category='hobby', view=current_view if current_user.is_authenticated else 'all') }}"
+                class="category-link-wrap"
+            >
+                <div class="category-chip {% if current_category == 'hobby' %}category-chip-active{% endif %}">
+                    <span class="category-icon">🎮</span>
+                    <span class="category-label">Hobby</span>
+                </div>
+            </a>
+
+            <a
+                href="{{ url_for('main.index', category='else', view=current_view if current_user.is_authenticated else 'all') }}"
+                class="category-link-wrap"
+            >
+                <div class="category-chip {% if current_category == 'else' %}category-chip-active{% endif %}">
+                    <span class="category-icon">📦</span>
+                    <span class="category-label">Else</span>
+                </div>
+            </a>
+        </div>
+    </section>
+
+    <!-- Feed Container - Colorful Marketplace -->
+    <div class="feed-container">
+        <!-- View Filter Tabs (only for authenticated users) -->
+        {% if current_user.is_authenticated %}
+        <div class="mb-4">
+            <div class="card" style="border: none; box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1); border-radius: 16px;">
+                <div class="card-body p-3">
+                    <div class="d-flex gap-2 justify-content-center flex-wrap">
+                        <a 
+                            href="{{ url_for('main.index', view='all', category=current_category, region=current_region) }}"
+                            class="btn {% if current_view == 'all' %}btn-hero{% else %}btn-outline-primary{% endif %}"
+                            style="border-radius: 12px; padding: 0.6rem 1.5rem; font-weight: 600; text-decoration: none;"
+                        >
+                            <i class="bi bi-globe me-2"></i>All Offers
+                        </a>
+                        <a 
+                            href="{{ url_for('main.index', view='following', category=current_category, region=current_region) }}"
+                            class="btn {% if current_view == 'following' %}btn-hero{% else %}btn-outline-primary{% endif %}"
+                            style="border-radius: 12px; padding: 0.6rem 1.5rem; font-weight: 600; text-decoration: none;"
+                        >
+                            <i class="bi bi-people me-2"></i>Following
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Marketplace offers - Colorful Design -->
+        <div class="mb-4">
+            <h2 class="h5 mb-4 fw-bold" style="color: #050505; display: flex; align-items: center; gap: 0.5rem;">
+                <span style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">✨</span>
+                {% if current_user.is_authenticated %}
+                    {% if current_view == 'following' %}
+                        Offers from people you follow
+                    {% else %}
+                        All Active Offers
+                    {% endif %}
+                {% else %}
+                    All Active Offers
+                {% endif %}
+            </h2>
+
+            {% if listings %}
+                <div class="row row-cols-1 row-cols-md-2 g-3">
+                    {% for listing in listings %}
+                        <div class="col">
+                            <article class="card h-100 shadow-sm listing-card">
+                                {% if listing.image_filename %}
+                                    <img
+                                        src="{{ url_for('static', filename='uploads/listings/' ~ listing.image_filename) }}"
+                                        class="card-img-top listing-image"
+                                        alt="{{ listing.title }}"
+                                    >
+                                {% endif %}
+                                <div class="card-body d-flex flex-column">
+                                    <div class="d-flex justify-content-between align-items-baseline mb-1">
+                                        <h3 class="h6 mb-0">
+                                            {{ listing.title }}
+                                        </h3>
+                                        {% if listing.is_free %}
+                                            <span class="fw-bold price-pill free-badge" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; padding: 0.4rem 1rem; border-radius: 20px; font-size: 0.95rem;">
+                                                <i class="bi bi-gift me-1"></i>Free
+                                            </span>
+                                        {% else %}
+                                            <span class="fw-bold price-pill">
+                                                ₪{{ "%.2f"|format(listing.price) }}
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                    <div class="text-muted small mb-2">
+                                        <div class="d-flex align-items-center gap-2">
+                                            {% if listing.seller.avatar_filename %}
+                                                <img
+                                                    src="{{ url_for('static', filename='uploads/avatars/' ~ listing.seller.avatar_filename) }}"
+                                                    alt="{{ listing.seller.username if listing.seller.username else listing.seller.display_name }}"
+                                                    class="avatar-circle-sm"
+                                                >
+                                            {% else %}
+                                                <div class="avatar-circle-sm placeholder">
+                                                    {{ (listing.seller.username if listing.seller.username else listing.seller.display_name)[:1].upper() }}
+                                                </div>
+                                            {% endif %}
+                                            <div>
+                                                <div>
+                                                    Seller:
+                                                    <a
+                                                        href="{{ url_for('main.profile', user_id=listing.seller.id) }}"
+                                                        class="text-decoration-none"
+                                                    >
+                                                        {{ listing.seller.username if listing.seller.username else listing.seller.display_name }}
+                                                    </a>
+                                                </div>
+                                                <div>
+                                                    {{ listing.created_at.strftime('%d %b') }}
+                                                </div>
+                                                <div>
+                                                    Status: {{ listing.status }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% if listing.description %}
+                                        <p class="card-text small flex-grow-1">
+                                            {{ listing.description }}
+                                        </p>
+                                    {% else %}
+                                        <p class="card-text text-muted small flex-grow-1">
+                                            No description provided.
+                                        </p>
+                                    {% endif %}
+
+                                    <div class="mt-2">
+                                        <a
+                                            href="{{ url_for('main.listing_detail', listing_id=listing.id) }}"
+                                            class="text-decoration-none small fw-semibold text-primary"
+                                        >
+                                            View details →
+                                        </a>
+                                    </div>
+                                </div>
+                            </article>
+                        </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Pagination -->
+                {% if listings_pagination.pages > 1 %}
+                <nav aria-label="Listings pagination" class="mt-4">
+                    <ul class="pagination justify-content-center">
+                        {% if listings_pagination.has_prev %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('main.index', page=listings_pagination.prev_num, category=current_category, region=current_region, view=current_view if current_user.is_authenticated else 'all') }}">
+                                    Previous
+                                </a>
+                            </li>
+                        {% endif %}
+                        {% for page_num in listings_pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                            {% if page_num %}
+                                {% if page_num == listings_pagination.page %}
+                                    <li class="page-item active">
+                                        <span class="page-link">{{ page_num }}</span>
+                                    </li>
+                                {% else %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="{{ url_for('main.index', page=page_num, category=current_category, region=current_region, view=current_view if current_user.is_authenticated else 'all') }}">
+                                            {{ page_num }}
+                                        </a>
+                                    </li>
+                                {% endif %}
+                            {% else %}
+                                <li class="page-item disabled">
+                                    <span class="page-link">…</span>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+                        {% if listings_pagination.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('main.index', page=listings_pagination.next_num, category=current_category, region=current_region, view=current_view if current_user.is_authenticated else 'all') }}">
+                                    Next
+                                </a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
+            {% else %}
+                <div class="card" style="border: none; box-shadow: 0 4px 16px rgba(102, 126, 234, 0.15); border-radius: 20px;">
+                    <div class="card-body text-center py-5">
+                        <i class="bi bi-bag" style="font-size: 4rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; opacity: 0.6;"></i>
+                        <p class="text-muted mt-3 mb-0" style="font-size: 1.1rem;">
+                            {% if current_user.is_authenticated %}
+                                {% if current_view == 'following' %}
+                                    No active offers from people you follow yet. <a href="{{ url_for('main.index', view='all') }}" class="text-decoration-none" style="color: #667eea; font-weight: 600;">View all offers</a> or follow more users!
+                                {% else %}
+                                    No active offers available. Create an offer from your <a href="{{ url_for('main.dashboard') }}" class="text-decoration-none" style="color: #667eea; font-weight: 600;">dashboard</a>!
+                                {% endif %}
+                            {% else %}
+                                No active offers available. <a href="{{ url_for('auth.register') }}" class="text-decoration-none" style="color: #667eea; font-weight: 600;">Sign up</a> to see more!
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Image Modal -->
+    <div class="modal fade" id="imageModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content" style="border-radius: 16px; border: none;">
+                <div class="modal-header" style="border-bottom: 1px solid #e0e0e0;">
+                    <h5 class="modal-title fw-bold" id="imageModalLabel"></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center p-0">
+                    <img id="modalImage" src="" alt="" class="img-fluid" style="max-height: 80vh; border-radius: 0 0 16px 16px;">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function openImageModal(imageSrc, imageTitle) {
+            document.getElementById('modalImage').src = imageSrc;
+            document.getElementById('imageModalLabel').textContent = imageTitle;
+        }
+    </script>
+
+    <!-- Image Modal -->
+    <div class="modal fade" id="imageModal" tabindex="-1" aria-labelledby="imageModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="imageModalLabel"></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-center p-0">
+                    <img id="modalImage" src="" alt="" class="img-fluid" style="max-height: 80vh; width: auto;">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function openImageModal(imageSrc, imageTitle) {
+            document.getElementById('modalImage').src = imageSrc;
+            document.getElementById('imageModalLabel').textContent = imageTitle;
+        }
+    </script>
+{% endblock %}

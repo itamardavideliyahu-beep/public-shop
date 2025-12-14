@@ -1,0 +1,273 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard – Public Shop{% endblock %}
+
+{% block content %}
+    <div class="feed-container" style="max-width: 100%; width: 100%;">
+        <h1 class="h2 mb-4" style="font-size: 2.5rem; font-weight: 800;">Dashboard</h1>
+
+        {% with messages = get_flashed_messages(with_categories=True) %}
+            {% if messages %}
+                <div class="mb-4">
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show mb-2" role="alert" style="font-size: 1.1rem; padding: 1rem 1.5rem;">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close" style="font-size: 0.875rem;"></button>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <p class="text-muted mb-5" style="font-size: 1.2rem;">
+            Welcome, {{ current_user.username if current_user.username else current_user.display_name }}.
+            Create a new listing to sell your item.
+        </p>
+
+        <!-- Unified Create Listing Form -->
+        <div class="mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="h4 mb-0 fw-bold" style="font-size: 1.75rem;">Create a new listing</h2>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data" class="w-100">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                        <input type="hidden" name="form_type" value="listing">
+
+                        <div class="row g-4">
+                            <div class="col-12 col-md-6 col-lg-4">
+                                <div class="mb-3">
+                                    <label for="title" class="form-label">Listing title</label>
+                                    <input
+                                        id="title"
+                                        name="title"
+                                        type="text"
+                                        class="form-control"
+                                        style="max-width: 100%; box-sizing: border-box;"
+                                        required
+                                    >
+                                </div>
+                            </div>
+
+                            <div class="col-12 col-md-6 col-lg-4">
+                                <div class="mb-3">
+                                    <label class="form-label">Listing Type</label>
+                                    <div class="form-check mb-2">
+                                        <input
+                                            class="form-check-input"
+                                            type="radio"
+                                            name="is_free"
+                                            id="for_sale"
+                                            value="false"
+                                            checked
+                                            onchange="togglePriceField(false)"
+                                        >
+                                        <label class="form-check-label" for="for_sale">
+                                            <i class="bi bi-cash-coin me-1"></i> For Sale
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input
+                                            class="form-check-input"
+                                            type="radio"
+                                            name="is_free"
+                                            id="for_free"
+                                            value="true"
+                                            onchange="togglePriceField(true)"
+                                        >
+                                        <label class="form-check-label" for="for_free" style="color: #28a745; font-weight: 600;">
+                                            <i class="bi bi-gift me-1"></i> Free Giveaway
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-12 col-md-6 col-lg-4" id="priceFieldContainer">
+                                <div class="mb-3">
+                                    <label for="price" class="form-label">Price (₪)</label>
+                                    <input
+                                        id="price"
+                                        name="price"
+                                        type="number"
+                                        step="0.01"
+                                        min="0"
+                                        class="form-control"
+                                        style="max-width: 100%; box-sizing: border-box;"
+                                        required
+                                    >
+                                </div>
+                            </div>
+
+                            <div class="col-12 col-md-6 col-lg-4">
+                                <div class="mb-3">
+                                    <label for="category" class="form-label">Category</label>
+                                    <select
+                                        id="category"
+                                        name="category"
+                                        class="form-select"
+                                        style="max-width: 100%; box-sizing: border-box;"
+                                        required
+                                    >
+                                        <option value="" disabled selected>Select category</option>
+                                        {% for value, label in listing_categories %}
+                                            <option value="{{ value }}">{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="col-12 col-md-6 col-lg-4">
+                                <div class="mb-3">
+                                    <label for="expires_days" class="form-label">
+                                        Expiration (days, max 365)
+                                    </label>
+                                    <input
+                                        id="expires_days"
+                                        name="expires_days"
+                                        type="number"
+                                        min="1"
+                                        max="365"
+                                        value="365"
+                                        class="form-control"
+                                        style="max-width: 100%; box-sizing: border-box;"
+                                    >
+                                </div>
+                            </div>
+
+                            <div class="col-12 col-md-6 col-lg-4">
+                                <div class="mb-3">
+                                    <label for="image" class="form-label">
+                                        Listing image
+                                    </label>
+                                    <input
+                                        id="image"
+                                        name="image"
+                                        type="file"
+                                        accept="image/*"
+                                        class="form-control"
+                                        style="max-width: 100%; box-sizing: border-box;"
+                                    >
+                                </div>
+                            </div>
+
+                            <div class="col-12">
+                                <div class="mb-3">
+                                    <label for="description" class="form-label">
+                                        Description
+                                    </label>
+                                    <textarea
+                                        id="description"
+                                        name="description"
+                                        rows="4"
+                                        class="form-control"
+                                        style="max-width: 100%; box-sizing: border-box; resize: vertical;"
+                                        placeholder="Describe your item..."
+                                    ></textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-success">
+                            <i class="bi bi-plus-circle me-1"></i> Create listing
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="mb-4">
+            <h2 class="h3 mb-4 fw-bold text-center" style="color: #050505; font-size: 2rem;">Your listings</h2>
+
+            {% if user_listings %}
+                <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 row-cols-xl-4 g-3">
+                    {% for listing in user_listings %}
+                        <div class="col">
+                            <article class="listing-card card">
+                                {% if listing.image_filename %}
+                                    <img
+                                        src="{{ url_for('static', filename='uploads/listings/' ~ listing.image_filename) }}"
+                                        class="listing-image"
+                                        alt="{{ listing.title }}"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#imageModal"
+                                        onclick="openImageModal('{{ url_for('static', filename='uploads/listings/' ~ listing.image_filename) }}', '{{ listing.title }}')"
+                                    >
+                                {% endif %}
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-start mb-3">
+                                        <h3 class="h5 mb-0 fw-bold" style="color: #050505; font-size: 1.35rem;">{{ listing.title }}</h3>
+                                        {% if listing.is_free %}
+                                            <span class="price-pill free-badge" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; padding: 0.6rem 1.5rem; border-radius: 20px; font-size: 1.15rem; font-weight: 700;">
+                                                <i class="bi bi-gift me-1"></i>Free
+                                            </span>
+                                        {% else %}
+                                            <span class="price-pill">₪{{ "%.2f"|format(listing.price) }}</span>
+                                        {% endif %}
+                                    </div>
+                                    <div class="text-muted mb-3" style="font-size: 1rem;">
+                                        {{ listing.created_at.strftime('%d %b') }}
+                                        {% if listing.expires_at %}
+                                            · Expires: {{ listing.expires_at.strftime('%d %b') }}
+                                        {% endif %}
+                                    </div>
+                                    {% if listing.description %}
+                                        <p class="card-text mb-3" style="color: #65676b; font-size: 1rem; line-height: 1.6;">
+                                            {{ listing.description[:100] }}{% if listing.description|length > 100 %}...{% endif %}
+                                        </p>
+                                    {% endif %}
+                                    <a href="{{ url_for('main.listing_detail', listing_id=listing.id) }}" class="btn btn-primary w-100">
+                                        View Details
+                                    </a>
+                                </div>
+                            </article>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="card">
+                    <div class="card-body text-center py-5">
+                        <i class="bi bi-bag" style="font-size: 4rem; color: #65676b; opacity: 0.5;"></i>
+                        <p class="text-muted mt-3 mb-0" style="font-size: 1.1rem;">You have not created any listings yet.</p>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Image Modal -->
+    <div class="modal fade" id="imageModal" tabindex="-1" aria-labelledby="imageModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="imageModalLabel"></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-center p-0">
+                    <img id="modalImage" src="" alt="" class="img-fluid" style="max-height: 80vh; width: auto;">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function openImageModal(imageSrc, imageTitle) {
+            document.getElementById('modalImage').src = imageSrc;
+            document.getElementById('imageModalLabel').textContent = imageTitle;
+        }
+        
+        function togglePriceField(isFree) {
+            const priceField = document.getElementById('price');
+            const priceContainer = document.getElementById('priceFieldContainer');
+            if (isFree) {
+                priceField.removeAttribute('required');
+                priceField.value = '0';
+                priceContainer.style.opacity = '0.5';
+            } else {
+                priceField.setAttribute('required', 'required');
+                priceField.value = '';
+                priceContainer.style.opacity = '1';
+            }
+        }
+    </script>
+{% endblock %}

@@ -1,0 +1,292 @@
+{% extends "base.html" %}
+
+{% block title %}Conversation with {{ other_user.username if other_user.username else other_user.display_name }} - Public Shop{% endblock %}
+
+{% block content %}
+  <div class="row justify-content-center mx-0">
+    <div class="col-12 col-lg-10 col-xl-9 px-3 px-md-4">
+      <div class="card shadow-sm mb-3">
+        <div class="card-body d-flex align-items-center justify-content-between">
+          <div class="d-flex align-items-center gap-2">
+            {% if other_user.avatar_filename %}
+              <img
+                src="{{ url_for('static', filename='uploads/avatars/' ~ other_user.avatar_filename) }}"
+                alt="{{ other_user.username if other_user.username else other_user.display_name }}"
+                class="avatar-circle-sm"
+              >
+            {% else %}
+              <div class="avatar-circle-sm placeholder">
+                {{ (other_user.username if other_user.username else other_user.display_name)[:1].upper() }}
+              </div>
+            {% endif %}
+            <div>
+              <div class="fw-semibold">
+                {{ other_user.username if other_user.username else other_user.display_name }}
+              </div>
+              {% if conversation.listing %}
+                <div class="small text-muted">
+                  About offer:
+                  <a
+                    href="{{ url_for('main.listing_detail', listing_id=conversation.listing.id) }}"
+                    class="text-decoration-none"
+                  >
+                    {{ conversation.listing.title }}
+                  </a>
+                </div>
+              {% endif %}
+            </div>
+          </div>
+          <div class="small text-muted text-end">
+            Started {{ conversation.created_at.strftime('%d %b %H:%M') }}
+          </div>
+        </div>
+      </div>
+
+      <div class="card mb-3">
+        <div class="conversation-messages" id="messagesContainer" style="min-height: 400px;">
+          {% if messages %}
+            {% for msg in messages %}
+              {% set is_own = (msg.sender_id == current_user.id) %}
+              <div class="message-row {% if is_own %}message-own{% else %}message-other{% endif %}" data-message-id="{{ msg.id }}">
+                <div class="message-bubble">
+                  <div class="message-meta small text-muted mb-1">
+                    {{ msg.sender.username if msg.sender.username else msg.sender.display_name }} · {{ msg.created_at.strftime('%d %b %H:%M') }}
+                  </div>
+                  <div class="message-content">
+                    {{ msg.content }}
+                  </div>
+                </div>
+              </div>
+            {% endfor %}
+          {% else %}
+            <p class="text-muted small mb-0" id="noMessages">
+              No messages yet. Be the first to say something.
+            </p>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <form
+            id="messageForm"
+            method="post"
+            action="{{ url_for('main.send_message', conversation_id=conversation.id) }}"
+            class="w-100"
+          >
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <div class="mb-3">
+              <label for="content" class="form-label" style="color: #050505; font-weight: 600;">
+                New message
+              </label>
+              <textarea
+                id="content"
+                name="content"
+                class="form-control"
+                rows="3"
+                placeholder="Write your message..."
+                style="max-width: 100%; box-sizing: border-box; resize: vertical;"
+                required
+              ></textarea>
+            </div>
+            <button type="submit" class="btn btn-hero w-100" id="sendButton" style="padding: 0.75rem 1.5rem; font-size: 1rem;">
+              Send
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Socket.IO Client -->
+  <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+  
+  <script>
+    (function() {
+      const conversationId = {{ conversation.id }};
+      const currentUserId = {{ current_user.id }};
+      const otherUserName = "{{ other_user.username if other_user.username else other_user.display_name }}";
+      const messagesContainer = document.getElementById('messagesContainer');
+      const messageForm = document.getElementById('messageForm');
+      const contentInput = document.getElementById('content');
+      const sendButton = document.getElementById('sendButton');
+      let lastMessageId = {% if messages %}{{ messages[-1].id }}{% else %}0{% endif %};
+      
+      // Initialize Socket.IO
+      const socket = io();
+      
+      // Join conversation room
+      socket.emit('join_conversation', { conversation_id: conversationId });
+      
+      // Listen for new messages via WebSocket
+      socket.on('new_message', function(data) {
+        if (data.conversation_id === conversationId && data.sender_id !== currentUserId) {
+          addMessage({
+            id: data.message_id,
+            sender_id: data.sender_id,
+            sender_name: otherUserName,
+            content: data.content,
+            created_at: data.created_at
+          });
+        }
+      });
+      
+      // Typing indicator
+      let typingTimeout;
+      contentInput.addEventListener('input', function() {
+        socket.emit('typing', {
+          conversation_id: conversationId,
+          typing: true
+        });
+        
+        clearTimeout(typingTimeout);
+        typingTimeout = setTimeout(() => {
+          socket.emit('typing', {
+            conversation_id: conversationId,
+            typing: false
+          });
+        }, 1000);
+      });
+      
+      socket.on('user_typing', function(data) {
+        if (data.user_id !== currentUserId) {
+          // Show typing indicator (you can implement this UI)
+          console.log(`${data.user_name} is typing...`);
+        }
+      });
+
+      // Format date helper
+      function formatDate(dateString) {
+        const date = new Date(dateString);
+        const day = String(date.getDate()).padStart(2, '0');
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const month = months[date.getMonth()];
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        return `${day} ${month} ${hours}:${minutes}`;
+      }
+
+      // Add message to DOM
+      function addMessage(message) {
+        const noMessages = document.getElementById('noMessages');
+        if (noMessages) {
+          noMessages.remove();
+        }
+
+        const isOwn = message.sender_id === currentUserId;
+        const messageRow = document.createElement('div');
+        messageRow.className = `message-row ${isOwn ? 'message-own' : 'message-other'}`;
+        messageRow.setAttribute('data-message-id', message.id);
+        
+        // Create message bubble with proper structure
+        const bubble = document.createElement('div');
+        bubble.className = 'message-bubble';
+        
+        const meta = document.createElement('div');
+        meta.className = 'message-meta small text-muted mb-1';
+        meta.textContent = `${message.sender_name} · ${message.created_at}`;
+        
+        const content = document.createElement('div');
+        content.className = 'message-content';
+        content.textContent = message.content;
+        
+        bubble.appendChild(meta);
+        bubble.appendChild(content);
+        messageRow.appendChild(bubble);
+        messagesContainer.appendChild(messageRow);
+        
+        scrollToBottom();
+        lastMessageId = Math.max(lastMessageId, message.id);
+      }
+
+      // Escape HTML to prevent XSS
+      function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+      }
+
+      // Scroll to bottom of messages
+      function scrollToBottom() {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+      }
+
+      // Fallback polling (if WebSocket fails)
+      function pollForMessages() {
+        fetch(`/conversations/${conversationId}/messages?last_id=${lastMessageId}`)
+          .then(response => response.json())
+          .then(data => {
+            if (data.messages && data.messages.length > 0) {
+              data.messages.forEach(message => {
+                addMessage(message);
+              });
+            }
+          })
+          .catch(error => {
+            console.error('Error polling for messages:', error);
+          });
+      }
+      
+      // Fallback polling every 5 seconds (if WebSocket not available)
+      let pollingInterval = setInterval(pollForMessages, 5000);
+
+      // Handle form submission with AJAX
+      messageForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const content = contentInput.value.trim();
+        if (!content) return;
+
+        sendButton.disabled = true;
+        sendButton.textContent = 'Sending...';
+
+        const formData = new FormData(messageForm);
+        // Ensure content is set (in case it was cleared)
+        if (!formData.has('content') || !formData.get('content')) {
+          formData.set('content', content);
+        }
+
+        fetch(messageForm.action, {
+          method: 'POST',
+          body: formData,
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+          },
+          credentials: 'same-origin'
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            addMessage(data.message);
+            contentInput.value = '';
+            sendButton.disabled = false;
+            sendButton.textContent = 'Send';
+          } else {
+            alert(data.error || 'Failed to send message');
+            sendButton.disabled = false;
+            sendButton.textContent = 'Send';
+          }
+        })
+        .catch(error => {
+          console.error('Error sending message:', error);
+          alert('An error occurred while sending your message.');
+          sendButton.disabled = false;
+          sendButton.textContent = 'Send';
+        });
+      });
+
+      // Start polling for new messages every 2 seconds
+      pollingInterval = setInterval(pollForMessages, 2000);
+
+      // Initial scroll to bottom
+      scrollToBottom();
+
+      // Cleanup on page unload
+      window.addEventListener('beforeunload', function() {
+        if (pollingInterval) {
+          clearInterval(pollingInterval);
+        }
+      });
+    })();
+  </script>
+{% endblock %}

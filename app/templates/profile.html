@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+
+{% block title %}{{ user.username if user.username else user.display_name }} - Profile - Public Shop{% endblock %}
+
+{% block content %}
+    <div class="feed-container" style="max-width: 100%; width: 100%;">
+        <!-- Profile card - מרכוז ושיפור -->
+        <div class="card mb-5" style="max-width: 900px; margin: 0 auto;">
+            <div class="card-body p-4 p-md-5">
+                <div class="row align-items-center">
+                    <div class="col-12 col-md-4 text-center mb-4 mb-md-0">
+                        {% if user.avatar_filename %}
+                            <img
+                                src="{{ url_for('static', filename='uploads/avatars/' ~ user.avatar_filename) }}"
+                                alt="{{ user.username if user.username else user.display_name }}"
+                                class="profile-avatar-large mb-3"
+                                data-bs-toggle="modal"
+                                data-bs-target="#imageModal"
+                                onclick="openImageModal('{{ url_for('static', filename='uploads/avatars/' ~ user.avatar_filename) }}', '{{ user.username if user.username else user.display_name }}')"
+                                style="cursor: pointer;"
+                            >
+                        {% else %}
+                            <div class="profile-avatar-large placeholder mb-3">
+                                {{ (user.username if user.username else user.display_name)[:1].upper() }}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="col-12 col-md-8">
+                        <div class="text-center text-md-start mb-4">
+                            <h1 class="h2 mb-3 fw-bold" style="color: #050505; font-size: 2.5rem;">
+                                {{ user.username if user.username else user.display_name }}
+                            </h1>
+                            
+                            <!-- Followers / following counters - מרכוז -->
+                            <div class="profile-stats mb-4">
+                                <div class="text-center d-inline-block me-4 me-md-5">
+                                    <div class="fw-bold" style="font-size: 2rem; color: #050505;">
+                                        {{ user.listings.count() }}
+                                    </div>
+                                    <div class="text-muted" style="font-size: 1rem; font-weight: 600;">Listings</div>
+                                </div>
+                                <div class="text-center d-inline-block me-4 me-md-5">
+                                    <div class="fw-bold" style="font-size: 2rem; color: #050505;">
+                                        {{ user.followers.count() }}
+                                    </div>
+                                    <div class="text-muted" style="font-size: 1rem; font-weight: 600;">Followers</div>
+                                </div>
+                                {% if current_user.is_authenticated and current_user.id == user.id %}
+                                    <div class="text-center d-inline-block">
+                                        <div class="fw-bold" style="font-size: 2rem; color: #050505;">
+                                            {{ user.followed.count() }}
+                                        </div>
+                                        <div class="text-muted" style="font-size: 1rem; font-weight: 600;">Following</div>
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            {% if user.bio %}
+                                <p class="mb-3" style="color: #050505; font-size: 1.1rem; line-height: 1.7;">
+                                    {{ user.bio }}
+                                </p>
+                            {% endif %}
+                            
+                            <p class="text-muted mb-4" style="font-size: 1rem;">
+                                Member since {{ user.created_at.strftime('%B %Y') }}
+                            </p>
+
+                            <!-- Follow / unfollow or edit profile -->
+                            {% if current_user.is_authenticated %}
+                                {% if current_user.id == user.id %}
+                                    <a
+                                        href="{{ url_for('main.edit_profile') }}"
+                                        class="btn btn-hero w-100 w-md-auto px-5"
+                                        style="min-width: 200px;"
+                                    >
+                                        <i class="bi bi-pencil me-2"></i> Edit profile
+                                    </a>
+                                {% else %}
+                                    <div class="d-flex flex-column flex-md-row gap-3 justify-content-center justify-content-md-start">
+                                        <form
+                                            method="post"
+                                            action="{% if current_user.is_following(user) %}{{ url_for('main.unfollow', user_id=user.id) }}{% else %}{{ url_for('main.follow', user_id=user.id) }}{% endif %}"
+                                            class="flex-grow-1 flex-md-grow-0"
+                                        >
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                            <button
+                                                type="submit"
+                                                class="btn {% if current_user.is_following(user) %}btn-outline-secondary{% else %}btn-hero{% endif %} w-100"
+                                                style="min-width: 150px;"
+                                            >
+                                                {% if current_user.is_following(user) %}
+                                                    <i class="bi bi-person-check me-2"></i> Following
+                                                {% else %}
+                                                    <i class="bi bi-person-plus me-2"></i> Follow
+                                                {% endif %}
+                                            </button>
+                                        </form>
+                                        <form
+                                            method="post"
+                                            action="{{ url_for('main.start_conversation_with_user', user_id=user.id) }}"
+                                            class="flex-grow-1 flex-md-grow-0"
+                                        >
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                            <button
+                                                type="submit"
+                                                class="btn btn-outline-primary w-100"
+                                                style="min-width: 150px;"
+                                            >
+                                                <i class="bi bi-envelope me-2"></i> Message
+                                            </button>
+                                        </form>
+                                    </div>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Offers - מרכוז -->
+        <div class="mb-5" style="max-width: 1200px; margin: 0 auto;">
+            <h2 class="h3 mb-4 fw-bold text-center" style="color: #050505; font-size: 2rem;">Offers</h2>
+            {% if listings %}
+                <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+                    {% for listing in listings %}
+                        <div class="col">
+                            <article class="listing-card card h-100">
+                                {% if listing.image_filename %}
+                                    <img
+                                        src="{{ url_for('static', filename='uploads/listings/' ~ listing.image_filename) }}"
+                                        class="listing-image"
+                                        alt="{{ listing.title }}"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#imageModal"
+                                        onclick="openImageModal('{{ url_for('static', filename='uploads/listings/' ~ listing.image_filename) }}', '{{ listing.title }}')"
+                                    >
+                                {% endif %}
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-start mb-3">
+                                        <h3 class="h5 mb-0 fw-bold" style="color: #050505; font-size: 1.35rem;">
+                                            {{ listing.title }}
+                                        </h3>
+                                        {% if listing.is_free %}
+                                            <span class="price-pill free-badge" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; padding: 0.6rem 1.5rem; border-radius: 20px; font-size: 1.15rem; font-weight: 700;">
+                                                <i class="bi bi-gift me-1"></i>Free
+                                            </span>
+                                        {% else %}
+                                            <span class="price-pill">
+                                                ₪{{ "%.2f"|format(listing.price) }}
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                    <div class="text-muted mb-3" style="font-size: 1rem;">
+                                        {{ listing.created_at.strftime('%d %b') }}
+                                        {% if listing.expires_at %}
+                                            · Expires: {{ listing.expires_at.strftime('%d %b') }}
+                                        {% endif %}
+                                    </div>
+                                    {% if listing.description %}
+                                        <p class="card-text mb-3" style="color: #65676b; font-size: 1rem; line-height: 1.6;">
+                                            {{ listing.description[:100] }}{% if listing.description|length > 100 %}...{% endif %}
+                                        </p>
+                                    {% endif %}
+                                    <a
+                                        href="{{ url_for('main.listing_detail', listing_id=listing.id) }}"
+                                        class="btn btn-primary w-100"
+                                    >
+                                        View Details
+                                    </a>
+                                </div>
+                            </article>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="card">
+                    <div class="card-body text-center py-5">
+                        <i class="bi bi-bag" style="font-size: 4rem; color: #65676b; opacity: 0.5;"></i>
+                        <p class="text-muted mt-3 mb-0" style="font-size: 1.1rem;">This user has not created any offers yet.</p>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Image Modal -->
+    <div class="modal fade" id="imageModal" tabindex="-1" aria-labelledby="imageModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="imageModalLabel"></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-center p-0">
+                    <img id="modalImage" src="" alt="" class="img-fluid" style="max-height: 80vh; width: auto;">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function openImageModal(imageSrc, imageTitle) {
+            document.getElementById('modalImage').src = imageSrc;
+            document.getElementById('imageModalLabel').textContent = imageTitle;
+        }
+    </script>
+{% endblock %}

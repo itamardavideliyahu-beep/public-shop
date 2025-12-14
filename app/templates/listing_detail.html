@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+
+{% block title %}{{ listing.title }} - Offer - Public Shop{% endblock %}
+
+{% block content %}
+  <div class="feed-container">
+    <div class="card mb-4">
+      {% if listing.image_filename %}
+        <img
+          src="{{ url_for('static', filename='uploads/listings/' ~ listing.image_filename) }}"
+          class="listing-image w-100"
+          alt="{{ listing.title }}"
+          data-bs-toggle="modal"
+          data-bs-target="#imageModal"
+          onclick="openImageModal('{{ url_for('static', filename='uploads/listings/' ~ listing.image_filename) }}', '{{ listing.title }}')"
+          style="height: 500px; object-fit: cover; cursor: pointer;"
+        >
+      {% endif %}
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start mb-3">
+          <div class="flex-grow-1">
+            <h1 class="h4 mb-2 fw-bold" style="color: #050505;">{{ listing.title }}</h1>
+            <div class="d-flex align-items-center gap-3 mb-2">
+              {% if listing.seller.avatar_filename %}
+                <img
+                  src="{{ url_for('static', filename='uploads/avatars/' ~ listing.seller.avatar_filename) }}"
+                  alt="{{ listing.seller.username if listing.seller.username else listing.seller.display_name }}"
+                  class="avatar-circle-sm"
+                >
+              {% else %}
+                <div class="avatar-circle-sm placeholder">
+                  {{ (listing.seller.username if listing.seller.username else listing.seller.display_name)[:1].upper() }}
+                </div>
+              {% endif %}
+              <div>
+                <a
+                  href="{{ url_for('main.profile', user_id=listing.seller.id) }}"
+                  class="text-decoration-none fw-semibold"
+                  style="color: #050505;"
+                >
+                  {{ listing.seller.username if listing.seller.username else listing.seller.display_name }}
+                </a>
+                <div class="text-muted small">{{ listing.created_at.strftime('%d %b') }}</div>
+              </div>
+            </div>
+          </div>
+          <div class="text-end">
+            {% if listing.is_free %}
+              <div class="price-pill free-badge" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; font-size: 1.5rem; padding: 0.75rem 1.5rem; border-radius: 25px; font-weight: 700;">
+                <i class="bi bi-gift me-2"></i>Free Giveaway
+              </div>
+            {% else %}
+              <div class="price-pill" style="font-size: 1.5rem; padding: 0.5rem 1rem;">
+                ₪{{ "%.2f"|format(listing.price) }}
+              </div>
+            {% endif %}
+            <div class="text-muted small mt-1 text-capitalize">{{ listing.category }}</div>
+          </div>
+        </div>
+
+        {% if listing.description %}
+          <p class="mb-3" style="color: #050505; line-height: 1.6;">
+            {{ listing.description }}
+          </p>
+        {% else %}
+          <p class="text-muted mb-3">
+            No description provided for this offer.
+          </p>
+        {% endif %}
+        
+        {% if listing.expires_at %}
+          <div class="alert alert-info mb-3">
+            <i class="bi bi-clock me-2"></i>Expires: {{ listing.expires_at.strftime('%d %b %Y') }}
+          </div>
+        {% endif %}
+
+        {% if current_user.is_authenticated %}
+          {% if current_user.id != listing.seller_id %}
+            <div class="d-flex gap-2">
+              <form
+                method="post"
+                action="{{ url_for('main.show_interest', listing_id=listing.id) }}"
+                class="flex-grow-1"
+              >
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <button type="submit" class="btn btn-primary w-100">
+                  <i class="bi bi-heart me-1"></i>Show Interest
+                </button>
+              </form>
+              <form
+                method="post"
+                action="{{ url_for('main.start_conversation', listing_id=listing.id) }}"
+                class="flex-grow-1"
+              >
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <button type="submit" class="btn btn-outline-primary w-100">
+                  <i class="bi bi-envelope me-1"></i>Message
+                </button>
+              </form>
+            </div>
+            <p class="small text-muted mt-2 mb-0">
+              Click "Show Interest" to start a chat and notify the seller.
+            </p>
+          {% else %}
+            <div class="alert alert-info mb-0">
+              <i class="bi bi-info-circle me-2"></i>You are the seller of this offer.
+            </div>
+          {% endif %}
+        {% else %}
+          <div class="alert alert-warning mb-0">
+            <i class="bi bi-lock me-2"></i><a href="{{ url_for('auth.login') }}" class="text-decoration-none">Login</a> to contact the seller.
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Image Modal -->
+  <div class="modal fade" id="imageModal" tabindex="-1" aria-labelledby="imageModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="imageModalLabel"></h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body text-center p-0">
+          <img id="modalImage" src="" alt="" class="img-fluid" style="max-height: 80vh; width: auto;">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function openImageModal(imageSrc, imageTitle) {
+      document.getElementById('modalImage').src = imageSrc;
+      document.getElementById('imageModalLabel').textContent = imageTitle;
+    }
+  </script>
+{% endblock %}
