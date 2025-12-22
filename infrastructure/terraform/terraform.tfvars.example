@@ -1,0 +1,47 @@
+# Copy this file to terraform.tfvars and fill in your values
+# DO NOT commit terraform.tfvars to version control!
+
+# Azure Service Principal Authentication
+# Create a service principal with: az ad sp create-for-rbac --name "terraform-sp" --role contributor --scopes /subscriptions/<subscription-id>
+subscription_id = "your-subscription-id"
+client_id       = "your-client-id"
+client_secret   = "your-client-secret"
+tenant_id       = "your-tenant-id"
+
+environment = "prod"
+location     = "East US"
+project_name = "public-shop"
+
+# App Service Configuration
+app_service_sku = "B1" # Basic tier - upgrade to S1, S2, S3 for Standard or P1, P2, P3 for Premium
+
+# PostgreSQL Configuration
+postgres_sku_name = "B_Standard_B1ms" # Burstable tier
+postgres_storage_mb = 32768 # 32 GB
+postgres_version = "15"
+
+# Redis Configuration (Docker)
+redis_host   = "redis"  # Docker container name or hostname
+redis_port   = 6379
+redis_password = ""     # Leave empty if no password required
+redis_use_ssl = false   # Set to true if Redis uses SSL/TLS
+
+# Container Registry
+container_registry_sku = "Basic" # Basic, Standard, or Premium
+
+# Storage Account
+storage_account_tier = "Standard"
+storage_account_replication_type = "LRS" # LRS, GRS, RAGRS, or ZRS
+
+# Network Configuration
+allowed_ip_addresses = [] # Add your IP addresses for database access if needed
+enable_private_endpoint = false # Set to true for private endpoints
+
+# Tags
+tags = {
+  Environment = "production"
+  Project     = "public-shop"
+  ManagedBy   = "Terraform"
+  Owner       = "DevOps Team"
+}
+

@@ -78,7 +78,12 @@ app/static/uploads/**/*
 *.tfstate
 *.tfstate.*
 .terraform.lock.hcl
+terraform.tfvars
+tfplan
 
 # Azure
 .azure/
+
+# Documentation (keep local only)
+docs/
 

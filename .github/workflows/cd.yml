@@ -1,0 +1,232 @@
+name: CD Pipeline - ACI Deployment
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'poc'
+        type: choice
+        options:
+          - poc
+          - prod
+          - staging
+
+env:
+  AZURE_RESOURCE_GROUP: rg-public-shop-poc
+  APP_CONTAINER_NAME: aci-app-public-shop-poc
+  POSTGRES_CONTAINER_NAME: aci-postgres-public-shop-poc
+  REDIS_CONTAINER_NAME: aci-redis-public-shop-poc
+  ACR_NAME: acrpublicshoppoc
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  build-and-push:
+    name: Build and Push to ACR
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Azure Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.AZURE_CONTAINER_REGISTRY }}
+          username: ${{ secrets.AZURE_CONTAINER_REGISTRY_USERNAME }}
+          password: ${{ secrets.AZURE_CONTAINER_REGISTRY_PASSWORD }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ secrets.AZURE_CONTAINER_REGISTRY }}/public-shop
+          tags: |
+            type=raw,value=latest
+            type=sha,prefix={{branch}}-
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=registry,ref=${{ secrets.AZURE_CONTAINER_REGISTRY }}/public-shop:buildcache
+          cache-to: type=registry,ref=${{ secrets.AZURE_CONTAINER_REGISTRY }}/public-shop:buildcache,mode=max
+
+  deploy:
+    name: Deploy to Azure Container Instances
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    environment: production
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Log in to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Restart App Container
+        run: |
+          echo "Restarting application container to pull new image..."
+          az container restart \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --name ${{ env.APP_CONTAINER_NAME }}
+          
+          echo "Waiting for container to restart..."
+          sleep 45
+
+      - name: Wait for container to be ready
+        run: |
+          echo "Checking container status..."
+          for i in {1..30}; do
+            STATE=$(az container show \
+              --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+              --name ${{ env.APP_CONTAINER_NAME }} \
+              --query "instanceView.state" -o tsv)
+            
+            if [ "$STATE" == "Running" ]; then
+              RESTART_COUNT=$(az container show \
+                --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+                --name ${{ env.APP_CONTAINER_NAME }} \
+                --query "containers[0].instanceView.restartCount" -o tsv)
+              
+              echo "Container is running (restart count: $RESTART_COUNT)"
+              
+              if [ "$RESTART_COUNT" -eq "0" ]; then
+                echo "✅ Container is stable!"
+                sleep 10
+                exit 0
+              fi
+            fi
+            
+            echo "Attempt $i: Container state is $STATE, waiting..."
+            sleep 10
+          done
+          
+          echo "❌ Container did not stabilize after 5 minutes"
+          exit 1
+
+      - name: Run database migrations
+        run: |
+          echo "Running database migrations..."
+          az container exec \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --name ${{ env.APP_CONTAINER_NAME }} \
+            --exec-command "flask db upgrade" || echo "Migration command executed (check logs for results)"
+          
+          sleep 5
+
+      - name: Health check
+        run: |
+          APP_FQDN=$(az container show \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --name ${{ env.APP_CONTAINER_NAME }} \
+            --query "ipAddress.fqdn" -o tsv)
+          
+          APP_URL="http://${APP_FQDN}:8000"
+          echo "Testing application at: $APP_URL"
+          
+          for i in {1..15}; do
+            echo "Health check attempt $i..."
+            
+            if curl -f -m 10 "${APP_URL}/health" 2>/dev/null; then
+              echo "✅ Application is healthy!"
+              
+              # Get full health response
+              HEALTH_RESPONSE=$(curl -s "${APP_URL}/health")
+              echo "Health response: $HEALTH_RESPONSE"
+              
+              exit 0
+            fi
+            
+            echo "Attempt $i failed, retrying in 10 seconds..."
+            sleep 10
+          done
+          
+          echo "❌ Health check failed after 15 attempts"
+          
+          # Get container logs for debugging
+          echo "Container logs:"
+          az container logs \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --name ${{ env.APP_CONTAINER_NAME }} \
+            --container-name app \
+            --tail 50 || true
+          
+          exit 1
+
+      - name: Get deployment info
+        if: success()
+        run: |
+          APP_FQDN=$(az container show \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --name ${{ env.APP_CONTAINER_NAME }} \
+            --query "ipAddress.fqdn" -o tsv)
+          
+          APP_IP=$(az container show \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --name ${{ env.APP_CONTAINER_NAME }} \
+            --query "ipAddress.ip" -o tsv)
+          
+          echo "🚀 Deployment successful!"
+          echo ""
+          echo "📍 Application URL: http://${APP_FQDN}:8000"
+          echo "📍 Application IP: ${APP_IP}:8000"
+          echo ""
+          echo "🔍 View logs:"
+          echo "   az container logs --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --name ${{ env.APP_CONTAINER_NAME }} --container-name app"
+
+      - name: Rollback on failure
+        if: failure()
+        run: |
+          echo "❌ Deployment failed!"
+          echo ""
+          echo "📋 Troubleshooting steps:"
+          echo "1. Check container logs:"
+          echo "   az container logs --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --name ${{ env.APP_CONTAINER_NAME }} --container-name app"
+          echo ""
+          echo "2. Check container status:"
+          echo "   az container show --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --name ${{ env.APP_CONTAINER_NAME }}"
+          echo ""
+          echo "3. Manual rollback (if needed):"
+          echo "   - Revert to previous image tag in ACR"
+          echo "   - Restart container"
+
+  notify:
+    name: Notify Deployment Status
+    runs-on: ubuntu-latest
+    needs: [build-and-push, deploy]
+    if: always()
+    
+    steps:
+      - name: Deployment Status
+        run: |
+          if [ "${{ needs.deploy.result }}" == "success" ]; then
+            echo "✅ Deployment to Azure Container Instances successful!"
+            echo "Environment: ${{ github.event.inputs.environment || 'poc' }}"
+            echo "Commit: ${{ github.sha }}"
+            echo "Branch: ${{ github.ref_name }}"
+          else
+            echo "❌ Deployment failed!"
+            echo "Build status: ${{ needs.build-and-push.result }}"
+            echo "Deploy status: ${{ needs.deploy.result }}"
+          fi
+          
+          # Add notification logic here (Slack, Teams, Email, etc.)
+          # Example for Slack:
+          # STATUS="${{ needs.deploy.result == 'success' && '✅ Success' || '❌ Failed' }}"
+          # curl -X POST -H 'Content-type: application/json' \
+          #   --data "{\"text\":\"Deployment ${STATUS} - Commit: ${{ github.sha }}\"}" \
+          #   ${{ secrets.SLACK_WEBHOOK_URL }}

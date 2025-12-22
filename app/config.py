@@ -31,11 +31,45 @@ class Config:
     db_uri = f"sqlite:///{abs_db_path.as_posix()}"
     
     # Get from environment or use default
-    # Priority: DATABASE_URL from env > default SQLite path
+    # Priority: DATABASE_URL from env > POSTGRES_* vars > default SQLite path
     env_db_uri = os.environ.get("DATABASE_URL")
+    
+    # Check if DATABASE_URL has password (contains :password@ or no password part)
+    # If DATABASE_URL exists but doesn't have password, try to build from POSTGRES_* vars
+    postgres_user = os.environ.get("POSTGRES_USER")
+    postgres_password = os.environ.get("POSTGRES_PASSWORD")
+    postgres_host = os.environ.get("POSTGRES_HOST")
+    postgres_db = os.environ.get("POSTGRES_DB")
+    
     if env_db_uri:
-        # Use DATABASE_URL from environment (supports PostgreSQL, MySQL, etc.)
-        SQLALCHEMY_DATABASE_URI = env_db_uri
+        # Check if URL has password (format: postgresql://user:password@host or postgresql://user@host)
+        if "://" in env_db_uri and "@" in env_db_uri:
+            # Extract user and host parts
+            parts = env_db_uri.split("@", 1)
+            if len(parts) == 2:
+                user_part = parts[0]
+                host_part = parts[1]
+                # Check if password exists (user:password format)
+                if "://" in user_part and ":" not in user_part.split("://")[1]:
+                    # No password in URL, try to use POSTGRES_PASSWORD if available
+                    if postgres_user and postgres_password and postgres_host and postgres_db:
+                        # Build URL from POSTGRES_* variables
+                        SQLALCHEMY_DATABASE_URI = f"postgresql://{postgres_user}:{postgres_password}@{postgres_host}/{postgres_db}"
+                        if "sslmode" in host_part:
+                            SQLALCHEMY_DATABASE_URI += "?" + host_part.split("?", 1)[1]
+                    else:
+                        # Use DATABASE_URL as is (will fail if password required)
+                        SQLALCHEMY_DATABASE_URI = env_db_uri
+                else:
+                    # Has password, use as is
+                    SQLALCHEMY_DATABASE_URI = env_db_uri
+            else:
+                SQLALCHEMY_DATABASE_URI = env_db_uri
+        else:
+            SQLALCHEMY_DATABASE_URI = env_db_uri
+    elif postgres_user and postgres_password and postgres_host and postgres_db:
+        # No DATABASE_URL, but have POSTGRES_* vars - build URL
+        SQLALCHEMY_DATABASE_URI = f"postgresql://{postgres_user}:{postgres_password}@{postgres_host}/{postgres_db}"
     else:
         # Use absolute path to ensure it works with spaces (SQLite default)
         SQLALCHEMY_DATABASE_URI = db_uri
@@ -49,10 +83,16 @@ class Config:
     MAX_IMAGE_SIZE = int(os.environ.get("MAX_IMAGE_SIZE", 5 * 1024 * 1024))  # 5MB default
 
     # Security settings
+    # Note: SESSION_COOKIE_SECURE should be True only when using HTTPS
+    # For ACI without HTTPS, keep it False
     SESSION_COOKIE_SECURE = os.environ.get("SESSION_COOKIE_SECURE", "False").lower() == "true"
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Lax"
     PERMANENT_SESSION_LIFETIME = int(os.environ.get("SESSION_LIFETIME", 86400))  # 24 hours
+    
+    # CSRF Protection Settings
+    WTF_CSRF_SSL_STRICT = False  # Allow CSRF over HTTP (for non-HTTPS deployments)
+    WTF_CSRF_CHECK_DEFAULT = True
 
     # Application settings
     DEBUG = os.environ.get("FLASK_DEBUG", "False").lower() == "true"
@@ -110,7 +150,9 @@ class ProductionConfig(Config):
     """Production configuration."""
     DEBUG = False
     TESTING = False
-    SESSION_COOKIE_SECURE = True
+    # SESSION_COOKIE_SECURE should be True only with HTTPS
+    # ACI without HTTPS = keep False, otherwise cookies won't work
+    SESSION_COOKIE_SECURE = os.environ.get("SESSION_COOKIE_SECURE", "False").lower() == "true"
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Lax"
 

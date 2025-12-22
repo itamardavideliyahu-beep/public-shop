@@ -80,10 +80,36 @@ Required environment variables (see `.env.example`):
 
 ## Production Deployment
 
-See deployment documentation for:
-- Azure deployment with Terraform
-- CI/CD pipeline setup
-- Production configuration
+הפרויקט כולל תשתית מלאה לפריסה ב-Azure עם Terraform ו-CI/CD pipeline.
+
+### 📚 תיעוד פריסה
+
+**כל התיעוד נמצא בתיקייה [`docs/`](docs/)**
+
+- **[מדריך התיעוד המלא](docs/INDEX.md)** - נקודת התחלה לכל התיעוד
+- **[התחלה מהירה](docs/terraform/START-HERE.md)** - קרא את זה קודם!
+- **[הגדרת Azure](docs/AZURE-SETUP.md)** - הגדרת Azure CLI ו-Service Principal
+- **[פריסה עם Terraform](docs/DEPLOYMENT.md)** - הוראות מפורטות לפריסת התשתית
+- **[שלבי פריסה](docs/DEPLOYMENT-STEPS.md)** - מדריך שלב אחר שלב
+- **[פתרון בעיות](docs/TROUBLESHOOTING.md)** - פתרון בעיות נפוצות
+
+### 🚀 התחלה מהירה
+
+1. קרא את [START-HERE](docs/terraform/START-HERE.md) - נקודת ההתחלה
+2. הגדר [Azure](docs/AZURE-SETUP.md) עם Service Principal
+3. פרוס עם [Terraform](docs/terraform/QUICK-START.md)
+4. הגדר [CI/CD](docs/CI-CD.md) ל-GitHub Actions
+
+### 🏗️ משאבי Azure
+
+לאחר הפריסה, המשאבים הבאים ייווצרו:
+- **Azure Container Instances (ACI)** - Application, PostgreSQL, Redis
+- **Azure Container Registry (ACR)** - Docker images
+- **Azure Key Vault** - Secrets management
+- **Application Insights** - Monitoring
+- **Storage Account** - File storage
+
+לפרטים נוספים, ראה [תיעוד התשתית](docs/INFRASTRUCTURE.md)
 
 ## License
 
