@@ -87,3 +87,11 @@ tfplan
 # Documentation (keep local only)
 docs/
 
+# Personal files
+PRE-PUSH-CHECKLIST.md
+TODO.md
+NOTES.md
+GITHUB-SECRETS.txt
+*-SECRETS.txt
+
+

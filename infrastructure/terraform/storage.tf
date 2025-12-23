@@ -53,3 +53,5 @@ resource "azurerm_storage_container" "listings" {
 
 
 
+
+
