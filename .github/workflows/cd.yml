@@ -48,7 +48,7 @@ jobs:
     name: Build and Push to ACR
     runs-on: ubuntu-latest
     needs: wait-for-ci
-    if: always() && (needs.wait-for-ci.result == 'success' || github.event_name == 'workflow_dispatch')
+    if: needs.wait-for-ci.result == 'success' || github.event_name == 'workflow_dispatch'
     
     steps:
       - name: Checkout code
