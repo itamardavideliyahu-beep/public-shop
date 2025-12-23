@@ -5,9 +5,10 @@ Utility functions for the Public Shop application.
 import os
 from pathlib import Path
 from typing import Optional, Tuple
-from werkzeug.utils import secure_filename
+
 from flask import current_app
 from PIL import Image
+from werkzeug.utils import secure_filename
 
 
 def allowed_file(filename: str, allowed_extensions: set) -> bool:

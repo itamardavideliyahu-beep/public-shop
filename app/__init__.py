@@ -1,18 +1,18 @@
-import os
 import logging
+import os
 from pathlib import Path
 
+from dotenv import load_dotenv
 from flask import Flask
-from flask_sqlalchemy import SQLAlchemy
-from flask_login import LoginManager, current_user
-from flask_migrate import Migrate
-from flask_wtf.csrf import CSRFProtect
+from flask_caching import Cache
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from flask_login import LoginManager, current_user
 from flask_mail import Mail
+from flask_migrate import Migrate
 from flask_socketio import SocketIO
-from flask_caching import Cache
-from dotenv import load_dotenv
+from flask_sqlalchemy import SQLAlchemy
+from flask_wtf.csrf import CSRFProtect
 
 # Load environment variables from .env file
 env_path = Path(__file__).parent.parent / ".env"
@@ -97,7 +97,6 @@ def create_app(config_name=None):
     # Import models so that SQLAlchemy is aware of them
     from app import models  # noqa: F401
     from app.models import User  # noqa: F401
-
     # Register blueprints
     from app.routes.auth import auth_bp
     from app.routes.main import main_bp
@@ -160,7 +159,8 @@ def create_app(config_name=None):
     @app.context_processor
     def inject_unread_count():
         from flask_login import current_user
-        from app.models import Message, Conversation
+
+        from app.models import Conversation, Message
 
         unread_count = 0
         try:
@@ -220,7 +220,7 @@ def create_app(config_name=None):
     # Request size limit handler
     @app.errorhandler(413)
     def request_entity_too_large(error):
-        from flask import flash, redirect, url_for, request
+        from flask import flash, redirect, request, url_for
 
         flash("File too large. Please upload a smaller file.", "error")
         return redirect(request.referrer or url_for("main.index")), 413

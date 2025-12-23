@@ -1,29 +1,17 @@
 import re
 import secrets
 from datetime import datetime, timedelta
-from flask import (
-    Blueprint,
-    render_template,
-    redirect,
-    url_for,
-    flash,
-    request,
-    current_app,
-    session,
-)
-from flask_login import (
-    login_user,
-    logout_user,
-    login_required,
-    current_user,
-)
 
-from app import db
-from app.models import User, EmailVerification
-from app.utils import sanitize_input, send_email_notification
-from app.forms import RegisterForm, LoginForm, EmailVerificationForm
+from flask import (Blueprint, current_app, flash, redirect, render_template,
+                   request, session, url_for)
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from flask_login import current_user, login_required, login_user, logout_user
+
+from app import db
+from app.forms import EmailVerificationForm, LoginForm, RegisterForm
+from app.models import EmailVerification, User
+from app.utils import sanitize_input, send_email_notification
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
 

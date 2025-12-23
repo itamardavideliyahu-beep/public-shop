@@ -6,8 +6,9 @@ from flask import redirect, url_for
 from flask_admin import Admin, AdminIndexView, expose
 from flask_admin.contrib.sqla import ModelView
 from flask_login import current_user
+
 from app import db
-from app.models import User, Post, Listing, Conversation, Message
+from app.models import Conversation, Listing, Message, Post, User
 
 
 class SecureAdminIndexView(AdminIndexView):

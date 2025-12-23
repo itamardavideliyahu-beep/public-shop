@@ -3,6 +3,7 @@ Background tasks for the Public Shop application.
 """
 
 from datetime import datetime
+
 from app import db
 from app.models import Listing
 

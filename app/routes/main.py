@@ -1,31 +1,16 @@
 import os
 from datetime import datetime
 
-from flask import (
-    Blueprint,
-    render_template,
-    request,
-    redirect,
-    url_for,
-    flash,
-    current_app,
-    abort,
-)
-from flask_login import login_required, current_user
-
-from app import db
-from app.models import (
-    Post,
-    Listing,
-    User,
-    Conversation,
-    Message,
-)
-from app.utils import save_uploaded_image, sanitize_input
-from app.forms import PostForm, ListingForm, SearchForm
+from flask import (Blueprint, abort, current_app, flash, redirect,
+                   render_template, request, url_for)
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from flask_login import current_user, login_required
 
+from app import db
+from app.forms import ListingForm, PostForm, SearchForm
+from app.models import Conversation, Listing, Message, Post, User
+from app.utils import sanitize_input, save_uploaded_image
 
 main_bp = Blueprint("main", __name__)
 

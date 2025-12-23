@@ -3,11 +3,12 @@ API routes for Public Shop.
 """
 
 from flask import jsonify, request
-from flask_login import login_required, current_user
-from flask_restful import Resource, Api, reqparse
-from app.api import api_bp
+from flask_login import current_user, login_required
+from flask_restful import Api, Resource, reqparse
+
 from app import db
-from app.models import User, Post, Listing, Conversation, Message
+from app.api import api_bp
+from app.models import Conversation, Listing, Message, Post, User
 
 api = Api(api_bp)
 

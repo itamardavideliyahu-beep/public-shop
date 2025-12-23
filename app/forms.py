@@ -2,26 +2,14 @@
 WTForms for the Public Shop application.
 """
 
-from flask_wtf import FlaskForm
-from flask_wtf.file import FileField, FileAllowed
-from wtforms import (
-    StringField,
-    TextAreaField,
-    FloatField,
-    SelectField,
-    PasswordField,
-    BooleanField,
-)
-from wtforms.validators import (
-    DataRequired,
-    Email,
-    Length,
-    NumberRange,
-    Optional,
-    ValidationError,
-    Regexp,
-)
 import re
+
+from flask_wtf import FlaskForm
+from flask_wtf.file import FileAllowed, FileField
+from wtforms import (BooleanField, FloatField, PasswordField, SelectField,
+                     StringField, TextAreaField)
+from wtforms.validators import (DataRequired, Email, Length, NumberRange,
+                                Optional, Regexp, ValidationError)
 
 
 def validate_password_strength(form, field):
