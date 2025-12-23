@@ -134,9 +134,7 @@ def test_contact_seller_message_flow():
     buyer, buyer_email, buyer_display_name, buyer_password = create_db_user()
     listing = create_db_listing_for_seller(seller)
 
-    message_text = (
-        f"Hi, I am interested in this item ({uuid.uuid4().hex[:4]})."
-    )
+    message_text = f"Hi, I am interested in this item ({uuid.uuid4().hex[:4]})."
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
@@ -151,7 +149,9 @@ def test_contact_seller_message_flow():
 
         # Step 3: click "Contact seller" (form submit button)
         page.click("text=Contact seller")
-        page.wait_for_timeout(1000)  # Wait for conversation to be created and page to load
+        page.wait_for_timeout(
+            1000
+        )  # Wait for conversation to be created and page to load
 
         # Step 4: verify that the conversation page loaded
         page_title = page.title()
@@ -194,7 +194,7 @@ def test_conversations_inbox():
     # Create a conversation and message in the database
     from app.models import Conversation, Message
     from datetime import datetime
-    
+
     conversation = Conversation(
         buyer=buyer,
         seller=seller,
@@ -229,21 +229,23 @@ def test_conversations_inbox():
         # Click on profile dropdown (avatar/name)
         page.click("#profileDropdown")
         page.wait_for_timeout(500)
-        
+
         # Click on Messages in dropdown
         page.click("text=Messages")
         page.wait_for_timeout(1000)
 
         # Step 3: Verify conversations inbox loaded
         page_title = page.title()
-        assert "Messages" in page_title, f"Expected 'Messages' in title, got '{page_title}'"
+        assert (
+            "Messages" in page_title
+        ), f"Expected 'Messages' in title, got '{page_title}'"
 
         # Step 4: Verify conversation appears in inbox
         page_content = page.content()
         assert (
             seller_display_name in page_content
         ), f"Seller name '{seller_display_name}' not found in conversations inbox."
-        
+
         # Step 5: Verify last message preview appears
         assert (
             message_text in page_content

@@ -84,5 +84,3 @@ def test_listing_model():
     assert listing.price == 99.99
     assert listing.category == "electronics"
     assert listing.status == "active"
-
-
