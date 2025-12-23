@@ -31,22 +31,27 @@ class User(db.Model, UserMixin):
     Represents a person that can log in, create stories (posts),
     create offers (listings), and send messages in conversations.
     """
+
     __tablename__ = "users"
 
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(255), unique=True, nullable=False, index=True)
     password_hash = db.Column(db.String(255), nullable=False)
-    username = db.Column(db.String(30), unique=True, nullable=True, index=True)  # Unique username for search
+    username = db.Column(
+        db.String(30), unique=True, nullable=True, index=True
+    )  # Unique username for search
     display_name = db.Column(db.String(80), nullable=False)
 
     # Optional profile fields
     avatar_filename = db.Column(db.String(255), nullable=True)
     bio = db.Column(db.Text, nullable=True)
-    region = db.Column(db.String(50), nullable=True, default="israel")  # Default to Israel
-    
+    region = db.Column(
+        db.String(50), nullable=True, default="israel"
+    )  # Default to Israel
+
     # Email verification
     email_verified = db.Column(db.Boolean, default=False, nullable=False)
-    
+
     # MFA fields (kept for backward compatibility, but not used in registration)
     mfa_enabled = db.Column(db.Boolean, default=False, nullable=False)
     mfa_secret = db.Column(db.String(32), nullable=True)  # TOTP secret
@@ -144,11 +149,7 @@ class User(db.Model, UserMixin):
         """
         if user.id is None:
             return False
-        return (
-            self.followed
-            .filter(followers.c.followed_id == user.id)
-            .count()
-        ) > 0
+        return (self.followed.filter(followers.c.followed_id == user.id).count()) > 0
 
     def __repr__(self) -> str:
         return f"<User id={self.id} email={self.email!r}>"
@@ -158,6 +159,7 @@ class Post(db.Model):
     """
     Social story created by a user that appears in the social feed.
     """
+
     __tablename__ = "posts"
 
     id = db.Column(db.Integer, primary_key=True)
@@ -197,6 +199,7 @@ class Listing(db.Model):
 
     Other users will be able to view and potentially buy this item.
     """
+
     __tablename__ = "listings"
 
     id = db.Column(db.Integer, primary_key=True)
@@ -222,7 +225,7 @@ class Listing(db.Model):
         default="other",
         index=True,
     )
-    
+
     # Whether this listing is for free (giveaway) or for sale
     is_free = db.Column(db.Boolean, default=False, nullable=False, index=True)
 
@@ -279,6 +282,7 @@ class Conversation(db.Model):
     One-to-one conversation between a buyer and a seller,
     usually about a specific listing.
     """
+
     __tablename__ = "conversations"
 
     id = db.Column(db.Integer, primary_key=True)
@@ -354,6 +358,7 @@ class Message(db.Model):
     """
     Single message inside a conversation.
     """
+
     __tablename__ = "messages"
 
     id = db.Column(db.Integer, primary_key=True)
@@ -411,6 +416,7 @@ class EmailVerification(db.Model):
     """
     Email verification codes for new user registrations.
     """
+
     __tablename__ = "email_verifications"
 
     id = db.Column(db.Integer, primary_key=True)
@@ -419,19 +425,19 @@ class EmailVerification(db.Model):
     username = db.Column(db.String(30), nullable=False)  # Username for new user
     display_name = db.Column(db.String(80), nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
-    
+
     created_at = db.Column(
         db.DateTime,
         default=datetime.utcnow,
         nullable=False,
     )
-    
+
     expires_at = db.Column(
         db.DateTime,
         nullable=False,
         index=True,
     )
-    
+
     verified = db.Column(
         db.Boolean,
         default=False,

@@ -27,17 +27,19 @@ from flask_limiter.util import get_remote_address
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
 
+
 # Limiter will be initialized in __init__.py
 def get_limiter():
     from flask import current_app
-    return current_app.extensions.get('limiter')
+
+    return current_app.extensions.get("limiter")
 
 
 @auth_bp.route("/register", methods=["GET", "POST"])
 def register():
     """
     Register a new user account.
-    
+
     On POST, validate the form and send email verification code.
     User account is only created after email verification.
     """
@@ -45,13 +47,13 @@ def register():
         return redirect(url_for("main.index"))
 
     form = RegisterForm()
-    
+
     if form.validate_on_submit():
         email = form.email.data.strip().lower()
         username = form.username.data.strip().lower()
         display_name = form.display_name.data
         password = form.password.data
-        
+
         # Check for existing user by email
         existing_user = User.query.filter_by(email=email).first()
         if existing_user is not None:
@@ -62,23 +64,35 @@ def register():
         else:
             # Check for pending verification
             existing_verification = EmailVerification.query.filter_by(
-                email=email,
-                verified=False
+                email=email, verified=False
             ).first()
-            
-            if existing_verification and existing_verification.expires_at > datetime.utcnow():
-                flash("A verification code has already been sent to this email. Please check your inbox.", "info")
+
+            if (
+                existing_verification
+                and existing_verification.expires_at > datetime.utcnow()
+            ):
+                flash(
+                    "A verification code has already been sent to this email. Please check your inbox.",
+                    "info",
+                )
                 return redirect(url_for("auth.verify_email", email=email))
-            
+
             try:
                 # Generate 6-digit verification code
-                verification_code = ''.join([str(secrets.randbelow(10)) for _ in range(6)])
-                
+                verification_code = "".join(
+                    [str(secrets.randbelow(10)) for _ in range(6)]
+                )
+
                 # Hash password for storage
-                temp_user = User(email=email, username=username, display_name=display_name, password_hash="")
+                temp_user = User(
+                    email=email,
+                    username=username,
+                    display_name=display_name,
+                    password_hash="",
+                )
                 temp_user.set_password(password)
                 password_hash = temp_user.password_hash
-                
+
                 # Create email verification record
                 verification = EmailVerification(
                     email=email,
@@ -86,18 +100,16 @@ def register():
                     username=username,
                     display_name=display_name,
                     password_hash=password_hash,
-                    expires_at=datetime.utcnow() + timedelta(minutes=15)  # Code expires in 15 minutes
+                    expires_at=datetime.utcnow()
+                    + timedelta(minutes=15),  # Code expires in 15 minutes
                 )
-                
+
                 # Delete old unverified records for this email
-                EmailVerification.query.filter_by(
-                    email=email,
-                    verified=False
-                ).delete()
-                
+                EmailVerification.query.filter_by(email=email, verified=False).delete()
+
                 db.session.add(verification)
                 db.session.commit()
-                
+
                 # Send verification email
                 email_subject = "Verify your email - Public Shop"
                 email_message = f"""
@@ -132,17 +144,20 @@ Public Shop Team
 </body>
 </html>
 """
-                
+
                 send_email_notification(
                     to_email=email,
                     subject=email_subject,
                     message=email_message,
-                    html=email_html
+                    html=email_html,
                 )
-                
-                flash("Verification code has been sent to your email. Please check your inbox.", "success")
+
+                flash(
+                    "Verification code has been sent to your email. Please check your inbox.",
+                    "success",
+                )
                 return redirect(url_for("auth.verify_email", email=email))
-                
+
             except Exception as e:
                 current_app.logger.error(f"Error creating verification: {str(e)}")
                 db.session.rollback()
@@ -163,11 +178,11 @@ def login():
         return redirect(url_for("main.index"))
 
     form = LoginForm()
-    
+
     if form.validate_on_submit():
         email = form.email.data.strip().lower()
         password = form.password.data
-        
+
         user = User.query.filter_by(email=email).first()
 
         if user is None or not user.check_password(password):
@@ -180,7 +195,7 @@ def login():
                 user.email_verified = True
                 db.session.commit()
                 flash("Your email has been verified. Welcome back!", "success")
-            
+
             login_user(user)
             current_app.logger.info(f"User {user.id} logged in successfully")
             flash("Logged in successfully.", "success")
@@ -202,42 +217,49 @@ def verify_email():
     """
     if current_user.is_authenticated:
         return redirect(url_for("main.index"))
-    
+
     email = request.args.get("email")
     if not email:
         flash("Invalid verification link.", "error")
         return redirect(url_for("auth.register"))
-    
+
     form = EmailVerificationForm()
-    
+
     # Get the verification record
-    verification = EmailVerification.query.filter_by(
-        email=email,
-        verified=False
-    ).order_by(EmailVerification.created_at.desc()).first()
-    
+    verification = (
+        EmailVerification.query.filter_by(email=email, verified=False)
+        .order_by(EmailVerification.created_at.desc())
+        .first()
+    )
+
     if not verification:
-        flash("No pending verification found for this email. Please register again.", "error")
+        flash(
+            "No pending verification found for this email. Please register again.",
+            "error",
+        )
         return redirect(url_for("auth.register"))
-    
+
     if verification.expires_at < datetime.utcnow():
         flash("Verification code has expired. Please register again.", "error")
         db.session.delete(verification)
         db.session.commit()
         return redirect(url_for("auth.register"))
-    
+
     if form.validate_on_submit():
         code = form.verification_code.data.strip()
-        
+
         if code == verification.verification_code:
             try:
                 # Check if username is still available (in case someone else took it)
                 if User.query.filter_by(username=verification.username).first():
-                    flash("This username is no longer available. Please register again with a different username.", "error")
+                    flash(
+                        "This username is no longer available. Please register again with a different username.",
+                        "error",
+                    )
                     db.session.delete(verification)
                     db.session.commit()
                     return redirect(url_for("auth.register"))
-                
+
                 # Create the user account
                 user = User(
                     email=verification.email,
@@ -249,25 +271,33 @@ def verify_email():
                     mfa_secret=None,
                 )
                 db.session.add(user)
-                
+
                 # Mark verification as completed
                 verification.verified = True
-                
+
                 db.session.commit()
-                
+
                 # Log the user in automatically
                 login_user(user)
-                
-                flash("Email verified successfully! Your account has been created.", "success")
+
+                flash(
+                    "Email verified successfully! Your account has been created.",
+                    "success",
+                )
                 return redirect(url_for("main.index"))
-                
+
             except Exception as e:
-                current_app.logger.error(f"Error creating user after verification: {str(e)}")
+                current_app.logger.error(
+                    f"Error creating user after verification: {str(e)}"
+                )
                 db.session.rollback()
-                flash("An error occurred while creating your account. Please try again.", "error")
+                flash(
+                    "An error occurred while creating your account. Please try again.",
+                    "error",
+                )
         else:
             flash("Invalid verification code. Please try again.", "error")
-    
+
     return render_template("auth/verify_email.html", form=form, email=email)
 
 
@@ -276,30 +306,31 @@ def resend_verification():
     """Resend verification code to email."""
     if current_user.is_authenticated:
         return redirect(url_for("main.index"))
-    
+
     email = request.form.get("email")
     if not email:
         flash("Invalid request.", "error")
         return redirect(url_for("auth.register"))
-    
-    verification = EmailVerification.query.filter_by(
-        email=email,
-        verified=False
-    ).order_by(EmailVerification.created_at.desc()).first()
-    
+
+    verification = (
+        EmailVerification.query.filter_by(email=email, verified=False)
+        .order_by(EmailVerification.created_at.desc())
+        .first()
+    )
+
     if not verification:
         flash("No pending verification found. Please register again.", "error")
         return redirect(url_for("auth.register"))
-    
+
     try:
         # Generate new code
-        verification_code = ''.join([str(secrets.randbelow(10)) for _ in range(6)])
+        verification_code = "".join([str(secrets.randbelow(10)) for _ in range(6)])
         verification.verification_code = verification_code
         verification.expires_at = datetime.utcnow() + timedelta(minutes=15)
         verification.created_at = datetime.utcnow()
-        
+
         db.session.commit()
-        
+
         # Send email
         email_subject = "Verify your email - Public Shop"
         email_message = f"""
@@ -328,20 +359,20 @@ Public Shop Team
 </body>
 </html>
 """
-        
+
         send_email_notification(
             to_email=email,
             subject=email_subject,
             message=email_message,
-            html=email_html
+            html=email_html,
         )
-        
+
         flash("New verification code has been sent to your email.", "success")
     except Exception as e:
         current_app.logger.error(f"Error resending verification: {str(e)}")
         db.session.rollback()
         flash("An error occurred. Please try again.", "error")
-    
+
     return redirect(url_for("auth.verify_email", email=email))
 
 

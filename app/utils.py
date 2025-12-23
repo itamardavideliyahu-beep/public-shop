@@ -1,6 +1,7 @@
 """
 Utility functions for the Public Shop application.
 """
+
 import os
 from pathlib import Path
 from typing import Optional, Tuple
@@ -41,7 +42,10 @@ def validate_image_file(file) -> Tuple[bool, Optional[str]]:
 
     # Check file extension
     if not allowed_file(file.filename, current_app.config["ALLOWED_IMAGE_EXTENSIONS"]):
-        return False, f"File type not allowed. Allowed types: {', '.join(current_app.config['ALLOWED_IMAGE_EXTENSIONS'])}"
+        return (
+            False,
+            f"File type not allowed. Allowed types: {', '.join(current_app.config['ALLOWED_IMAGE_EXTENSIONS'])}",
+        )
 
     # Check file size
     file.seek(0, os.SEEK_END)
@@ -67,36 +71,38 @@ def validate_image_file(file) -> Tuple[bool, Optional[str]]:
 def create_thumbnail(image_path: Path, size: tuple, output_path: Path) -> bool:
     """
     Create a thumbnail from an image.
-    
+
     Args:
         image_path: Path to the source image.
         size: Tuple of (width, height) for thumbnail.
         output_path: Path where thumbnail should be saved.
-    
+
     Returns:
         True if successful, False otherwise.
     """
     try:
         img = Image.open(image_path)
         img.thumbnail(size, Image.Resampling.LANCZOS)
-        
+
         # Convert RGBA to RGB if necessary (for JPEG compatibility)
-        if img.mode in ('RGBA', 'LA', 'P'):
-            background = Image.new('RGB', img.size, (255, 255, 255))
-            if img.mode == 'P':
-                img = img.convert('RGBA')
-            background.paste(img, mask=img.split()[-1] if img.mode == 'RGBA' else None)
+        if img.mode in ("RGBA", "LA", "P"):
+            background = Image.new("RGB", img.size, (255, 255, 255))
+            if img.mode == "P":
+                img = img.convert("RGBA")
+            background.paste(img, mask=img.split()[-1] if img.mode == "RGBA" else None)
             img = background
-        
+
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        img.save(output_path, 'JPEG', quality=85, optimize=True)
+        img.save(output_path, "JPEG", quality=85, optimize=True)
         return True
     except Exception as e:
         current_app.logger.error(f"Error creating thumbnail: {str(e)}")
         return False
 
 
-def save_uploaded_image(file, subdirectory: str, prefix: str = "", create_thumb: bool = False) -> Optional[str]:
+def save_uploaded_image(
+    file, subdirectory: str, prefix: str = "", create_thumb: bool = False
+) -> Optional[str]:
     """
     Save an uploaded image file to the uploads directory and optionally create thumbnails.
 
@@ -140,31 +146,33 @@ def save_uploaded_image(file, subdirectory: str, prefix: str = "", create_thumb:
     try:
         file.seek(0)
         file.save(str(file_path))
-        
+
         # Create thumbnail if requested
         if create_thumb:
             thumb_size = current_app.config.get("THUMBNAIL_SIZE", (400, 400))
             if subdirectory == "avatars":
                 thumb_size = current_app.config.get("AVATAR_SIZE", (200, 200))
-            
+
             thumb_path = upload_path / "thumbs" / filename
             create_thumbnail(file_path, thumb_size, thumb_path)
-        
+
         # Optimize the main image
         try:
             img = Image.open(file_path)
-            if img.mode in ('RGBA', 'LA', 'P'):
-                background = Image.new('RGB', img.size, (255, 255, 255))
-                if img.mode == 'P':
-                    img = img.convert('RGBA')
-                background.paste(img, mask=img.split()[-1] if img.mode == 'RGBA' else None)
+            if img.mode in ("RGBA", "LA", "P"):
+                background = Image.new("RGB", img.size, (255, 255, 255))
+                if img.mode == "P":
+                    img = img.convert("RGBA")
+                background.paste(
+                    img, mask=img.split()[-1] if img.mode == "RGBA" else None
+                )
                 img = background
-            
+
             # Save optimized version
-            img.save(file_path, 'JPEG', quality=85, optimize=True)
+            img.save(file_path, "JPEG", quality=85, optimize=True)
         except Exception as e:
             current_app.logger.warning(f"Could not optimize image: {str(e)}")
-        
+
         return filename
     except Exception as e:
         current_app.logger.error(f"Error saving file: {str(e)}")
@@ -190,35 +198,34 @@ def sanitize_input(text: str, max_length: Optional[int] = None) -> str:
     return text
 
 
-def send_email_notification(to_email: str, subject: str, message: str, html: str = None) -> bool:
+def send_email_notification(
+    to_email: str, subject: str, message: str, html: str = None
+) -> bool:
     """
     Send an email notification using Flask-Mail.
-    
+
     Args:
         to_email: Recipient email address.
         subject: Email subject.
         message: Plain text email body.
         html: Optional HTML email body.
-    
+
     Returns:
         True if email was sent successfully, False otherwise.
     """
     try:
         from flask_mail import Message
-        
+
         # Check if mail is configured
         if not current_app.config.get("MAIL_USERNAME"):
-            current_app.logger.warning(f"Email not configured. Would send to {to_email}: {subject}")
+            current_app.logger.warning(
+                f"Email not configured. Would send to {to_email}: {subject}"
+            )
             return True  # Don't fail if email not configured
-        
-        msg = Message(
-            subject=subject,
-            recipients=[to_email],
-            body=message,
-            html=html
-        )
-        
-        mail = current_app.extensions.get('mail')
+
+        msg = Message(subject=subject, recipients=[to_email], body=message, html=html)
+
+        mail = current_app.extensions.get("mail")
         if mail:
             mail.send(msg)
             current_app.logger.info(f"Email sent to {to_email}: {subject}")
@@ -229,4 +236,3 @@ def send_email_notification(to_email: str, subject: str, message: str, html: str
     except Exception as e:
         current_app.logger.error(f"Failed to send email to {to_email}: {str(e)}")
         return False
-

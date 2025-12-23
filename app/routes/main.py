@@ -51,12 +51,13 @@ REGIONS = [
 def index():
     """
     Home page: show marketplace offers.
-    
+
     Filter options:
     - 'following': Show only offers from users the current user follows (if authenticated)
     - 'all': Show all offers from all users (default)
     """
     from flask import request
+
     category_filter = request.args.get("category", "").strip() or None
     region_filter = request.args.get("region", "").strip() or None
     view_filter = request.args.get("view", "all").strip()  # 'all' or 'following'
@@ -67,7 +68,7 @@ def index():
 
     # Offers (listings) with pagination
     query = Listing.query.filter_by(status="active")
-    
+
     # Apply view filter
     if current_user.is_authenticated and view_filter == "following":
         # IDs of followed users + the current user
@@ -77,9 +78,7 @@ def index():
     # If view_filter is 'all' or user not authenticated, show all listings (already set above)
 
     # Filter out expired listings
-    query = query.filter(
-        (Listing.expires_at.is_(None)) | (Listing.expires_at > now)
-    )
+    query = query.filter((Listing.expires_at.is_(None)) | (Listing.expires_at > now))
 
     # Optional category filter for offers
     if category_filter:
@@ -91,9 +90,7 @@ def index():
         query = query.join(User).filter(User.region == region_filter)
 
     listings_pagination = query.order_by(Listing.created_at.desc()).paginate(
-        page=page,
-        per_page=current_app.config["LISTINGS_PER_PAGE"],
-        error_out=False
+        page=page, per_page=current_app.config["LISTINGS_PER_PAGE"], error_out=False
     )
     listings = listings_pagination.items
 
@@ -128,7 +125,9 @@ def dashboard():
         # --- Create a new offer (listing) with optional image upload ---
         if form_type == "listing":
             title = sanitize_input(request.form.get("title", ""), max_length=120)
-            description = sanitize_input(request.form.get("description", ""), max_length=2000)
+            description = sanitize_input(
+                request.form.get("description", ""), max_length=2000
+            )
             price_raw = request.form.get("price", "").strip()
             category_value = request.form.get("category", "").strip()
             image_file = request.files.get("image")
@@ -143,8 +142,11 @@ def dashboard():
                 errors.append("Title must be no more than 120 characters.")
 
             # Check if this is a free listing (giveaway) - check this before price validation
-            is_free = request.form.get("is_free") == "on" or request.form.get("is_free") == "true"
-            
+            is_free = (
+                request.form.get("is_free") == "on"
+                or request.form.get("is_free") == "true"
+            )
+
             # Price validation - only required if not a free listing
             price = 0.0
             if is_free:
@@ -177,10 +179,12 @@ def dashboard():
                 image_filename = save_uploaded_image(
                     image_file,
                     subdirectory="listings",
-                    prefix=f"listing_{current_user.id}"
+                    prefix=f"listing_{current_user.id}",
                 )
                 if not image_filename:
-                    errors.append("Failed to upload image. Please check the file type and size.")
+                    errors.append(
+                        "Failed to upload image. Please check the file type and size."
+                    )
 
             # Handle expiration date
             expires_at = None
@@ -191,15 +195,19 @@ def dashboard():
                     if expires_days < 1:
                         errors.append("Expiration days must be at least 1.")
                     elif expires_days > 365:
-                        errors.append("Expiration cannot be more than 1 year (365 days).")
+                        errors.append(
+                            "Expiration cannot be more than 1 year (365 days)."
+                        )
                     else:
                         from datetime import timedelta
+
                         expires_at = datetime.utcnow() + timedelta(days=expires_days)
                 except ValueError:
                     errors.append("Expiration days must be a valid number.")
             else:
                 # Default to 1 year if not specified
                 from datetime import timedelta
+
                 expires_at = datetime.utcnow() + timedelta(days=365)
 
             if errors:
@@ -211,7 +219,9 @@ def dashboard():
                         seller=current_user,
                         title=title,
                         description=description or None,
-                        price=price if not is_free else 0.0,  # Free listings have price 0
+                        price=(
+                            price if not is_free else 0.0
+                        ),  # Free listings have price 0
                         status="active",
                         image_filename=image_filename,
                         category=category_value,
@@ -226,7 +236,10 @@ def dashboard():
                 except Exception as e:
                     current_app.logger.error(f"Error creating listing: {str(e)}")
                     db.session.rollback()
-                    flash("An error occurred while creating your offer. Please try again.", "error")
+                    flash(
+                        "An error occurred while creating your offer. Please try again.",
+                        "error",
+                    )
 
         else:
             # Unknown or missing form_type
@@ -234,8 +247,7 @@ def dashboard():
 
     # On GET (or if there were validation errors), show current data
     user_listings = (
-        Listing.query
-        .filter_by(seller_id=current_user.id)
+        Listing.query.filter_by(seller_id=current_user.id)
         .order_by(Listing.created_at.desc())
         .all()
     )
@@ -253,13 +265,13 @@ def listing_detail(listing_id: int):
     Show a detailed page for a single offer.
     """
     listing = Listing.query.get_or_404(listing_id)
-    
+
     # Check if listing is expired
     if listing.expires_at and listing.expires_at < datetime.utcnow():
         listing.status = "inactive"
         db.session.commit()
         flash("This offer has expired.", "warning")
-    
+
     return render_template("listing_detail.html", listing=listing)
 
 
@@ -270,23 +282,27 @@ def show_interest(listing_id: int):
     Show interest in a listing: start a conversation and send email notification.
     """
     listing = Listing.query.get_or_404(listing_id)
-    
+
     if current_user.id == listing.seller_id:
         flash("You cannot show interest in your own listing.", "error")
         return redirect(url_for("main.listing_detail", listing_id=listing_id))
-    
+
     # Check if conversation already exists
     existing_conversation = Conversation.query.filter_by(
         listing_id=listing_id,
         buyer_id=current_user.id,
         seller_id=listing.seller_id,
     ).first()
-    
+
     if existing_conversation:
         # Conversation already exists, just redirect to it
         flash("You already have a conversation about this listing.", "info")
-        return redirect(url_for("main.conversation_detail", conversation_id=existing_conversation.id))
-    
+        return redirect(
+            url_for(
+                "main.conversation_detail", conversation_id=existing_conversation.id
+            )
+        )
+
     # Create new conversation
     try:
         conversation = Conversation(
@@ -297,7 +313,7 @@ def show_interest(listing_id: int):
             updated_at=datetime.utcnow(),
         )
         db.session.add(conversation)
-        
+
         # Send initial message
         initial_message = Message(
             conversation=conversation,
@@ -308,10 +324,11 @@ def show_interest(listing_id: int):
         )
         db.session.add(initial_message)
         db.session.commit()
-        
+
         # Send email notification to seller
         try:
             from app.utils import send_email_notification
+
             send_email_notification(
                 to_email=listing.seller.email,
                 subject=f"New Interest in Your Listing: {listing.title}",
@@ -320,9 +337,14 @@ def show_interest(listing_id: int):
         except Exception as e:
             current_app.logger.error(f"Failed to send email notification: {str(e)}")
             # Don't fail the request if email fails
-        
-        flash("Interest shown! A conversation has been started with the seller.", "success")
-        return redirect(url_for("main.conversation_detail", conversation_id=conversation.id))
+
+        flash(
+            "Interest shown! A conversation has been started with the seller.",
+            "success",
+        )
+        return redirect(
+            url_for("main.conversation_detail", conversation_id=conversation.id)
+        )
     except Exception as e:
         current_app.logger.error(f"Error showing interest: {str(e)}")
         db.session.rollback()
@@ -343,23 +365,20 @@ def conversations_inbox():
     current user is either the buyer or the seller.
     """
     from flask import request
+
     page = request.args.get("page", 1, type=int)
-    
+
     # Base query for conversations
-    conversations_query = (
-        Conversation.query
-        .filter(
-            (Conversation.buyer_id == current_user.id)
-            | (Conversation.seller_id == current_user.id)
-        )
-        .order_by(Conversation.updated_at.desc())
-    )
-    
+    conversations_query = Conversation.query.filter(
+        (Conversation.buyer_id == current_user.id)
+        | (Conversation.seller_id == current_user.id)
+    ).order_by(Conversation.updated_at.desc())
+
     # Paginate conversations
     pagination = conversations_query.paginate(
         page=page,
         per_page=current_app.config["CONVERSATIONS_PER_PAGE"],
-        error_out=False
+        error_out=False,
     )
     conversations = pagination.items
 
@@ -367,15 +386,13 @@ def conversations_inbox():
     conversations_with_last_message = []
     for conv in conversations:
         last_message = (
-            Message.query
-            .filter_by(conversation_id=conv.id)
+            Message.query.filter_by(conversation_id=conv.id)
             .order_by(Message.created_at.desc())
             .first()
         )
-        conversations_with_last_message.append({
-            'conversation': conv,
-            'last_message': last_message
-        })
+        conversations_with_last_message.append(
+            {"conversation": conv, "last_message": last_message}
+        )
 
     return render_template(
         "conversations.html",
@@ -398,15 +415,11 @@ def start_conversation(listing_id: int):
         return redirect(url_for("main.listing_detail", listing_id=listing.id))
 
     # Try to find an existing conversation for this buyer+seller+listing
-    conversation = (
-        Conversation.query
-        .filter_by(
-            buyer_id=current_user.id,
-            seller_id=listing.seller_id,
-            listing_id=listing.id,
-        )
-        .first()
-    )
+    conversation = Conversation.query.filter_by(
+        buyer_id=current_user.id,
+        seller_id=listing.seller_id,
+        listing_id=listing.id,
+    ).first()
 
     if conversation is None:
         conversation = Conversation(
@@ -442,17 +455,19 @@ def start_conversation_with_user(user_id: int):
 
     # Try to find an existing conversation between these two users (without a listing)
     # Check both directions: current_user as buyer or as seller
-    conversation = (
-        Conversation.query
-        .filter(
+    conversation = Conversation.query.filter(
+        (
             (
-                ((Conversation.buyer_id == current_user.id) & (Conversation.seller_id == other_user.id))
-                | ((Conversation.buyer_id == other_user.id) & (Conversation.seller_id == current_user.id))
-            ),
-            Conversation.listing_id.is_(None)  # General conversation, not about a listing
-        )
-        .first()
-    )
+                (Conversation.buyer_id == current_user.id)
+                & (Conversation.seller_id == other_user.id)
+            )
+            | (
+                (Conversation.buyer_id == other_user.id)
+                & (Conversation.seller_id == current_user.id)
+            )
+        ),
+        Conversation.listing_id.is_(None),  # General conversation, not about a listing
+    ).first()
 
     if conversation is None:
         # Create new conversation
@@ -474,6 +489,7 @@ def start_conversation_with_user(user_id: int):
         url_for("main.conversation_detail", conversation_id=conversation.id)
     )
 
+
 @main_bp.route("/conversations/<int:conversation_id>")
 @login_required
 def conversation_detail(conversation_id: int):
@@ -486,8 +502,7 @@ def conversation_detail(conversation_id: int):
         abort(403)
 
     messages = (
-        Message.query
-        .filter_by(conversation_id=conversation.id)
+        Message.query.filter_by(conversation_id=conversation.id)
         .order_by(Message.created_at.asc())
         .all()
     )
@@ -520,17 +535,38 @@ def send_message(conversation_id: int):
     content = sanitize_input(request.form.get("content", ""), max_length=2000)
 
     if not content:
-        if request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        if (
+            request.is_json
+            or request.headers.get("X-Requested-With") == "XMLHttpRequest"
+        ):
             from flask import jsonify
-            return jsonify({"success": False, "error": "Message content cannot be empty."}), 400
+
+            return (
+                jsonify(
+                    {"success": False, "error": "Message content cannot be empty."}
+                ),
+                400,
+            )
         flash("Message content cannot be empty.", "error")
         return redirect(
             url_for("main.conversation_detail", conversation_id=conversation.id)
         )
     elif len(content) < 1:
-        if request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        if (
+            request.is_json
+            or request.headers.get("X-Requested-With") == "XMLHttpRequest"
+        ):
             from flask import jsonify
-            return jsonify({"success": False, "error": "Message content must be at least 1 character long."}), 400
+
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "error": "Message content must be at least 1 character long.",
+                    }
+                ),
+                400,
+            )
         flash("Message content must be at least 1 character long.", "error")
         return redirect(
             url_for("main.conversation_detail", conversation_id=conversation.id)
@@ -551,25 +587,35 @@ def send_message(conversation_id: int):
         db.session.commit()
 
         # Determine recipient and send email notification
-        recipient = conversation.seller if conversation.buyer_id == current_user.id else conversation.buyer
-        
+        recipient = (
+            conversation.seller
+            if conversation.buyer_id == current_user.id
+            else conversation.buyer
+        )
+
         # Emit SocketIO event for real-time updates
         try:
             from app import socketio
-            socketio.emit('new_message', {
-                'conversation_id': conversation_id,
-                'message_id': message.id,
-                'sender_id': message.sender_id,
-                'sender_name': current_user.display_name,
-                'content': message.content,
-                'created_at': message.created_at.strftime('%d %b %H:%M'),
-            }, room=f'conversation_{conversation_id}')
+
+            socketio.emit(
+                "new_message",
+                {
+                    "conversation_id": conversation_id,
+                    "message_id": message.id,
+                    "sender_id": message.sender_id,
+                    "sender_name": current_user.display_name,
+                    "content": message.content,
+                    "created_at": message.created_at.strftime("%d %b %H:%M"),
+                },
+                room=f"conversation_{conversation_id}",
+            )
         except Exception as e:
             current_app.logger.error(f"Failed to emit SocketIO event: {str(e)}")
-        
+
         # Send email notification to recipient
         try:
             from app.utils import send_email_notification
+
             send_email_notification(
                 to_email=recipient.email,
                 subject=f"New message from {current_user.display_name}",
@@ -579,18 +625,27 @@ def send_message(conversation_id: int):
             current_app.logger.error(f"Failed to send email notification: {str(e)}")
 
         # If AJAX request, return JSON
-        if request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        if (
+            request.is_json
+            or request.headers.get("X-Requested-With") == "XMLHttpRequest"
+        ):
             from flask import jsonify
-            return jsonify({
-                "success": True,
-                "message": {
-                    "id": message.id,
-                    "content": message.content,
-                    "sender_id": message.sender_id,
-                    "sender_name": message.sender.display_name,
-                    "created_at": message.created_at.strftime("%d %b %H:%M")
-                }
-            }), 200
+
+            return (
+                jsonify(
+                    {
+                        "success": True,
+                        "message": {
+                            "id": message.id,
+                            "content": message.content,
+                            "sender_id": message.sender_id,
+                            "sender_name": message.sender.display_name,
+                            "created_at": message.created_at.strftime("%d %b %H:%M"),
+                        },
+                    }
+                ),
+                200,
+            )
 
         flash("Message sent.", "success")
         return redirect(
@@ -599,10 +654,24 @@ def send_message(conversation_id: int):
     except Exception as e:
         current_app.logger.error(f"Error sending message: {str(e)}")
         db.session.rollback()
-        if request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        if (
+            request.is_json
+            or request.headers.get("X-Requested-With") == "XMLHttpRequest"
+        ):
             from flask import jsonify
-            return jsonify({"success": False, "error": "An error occurred while sending your message."}), 500
-        flash("An error occurred while sending your message. Please try again.", "error")
+
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "error": "An error occurred while sending your message.",
+                    }
+                ),
+                500,
+            )
+        flash(
+            "An error occurred while sending your message. Please try again.", "error"
+        )
         return redirect(
             url_for("main.conversation_detail", conversation_id=conversation.id)
         )
@@ -638,14 +707,16 @@ def get_messages(conversation_id: int):
 
     messages_data = []
     for msg in messages:
-        messages_data.append({
-            "id": msg.id,
-            "content": msg.content,
-            "sender_id": msg.sender_id,
-            "sender_name": msg.sender.display_name,
-            "is_own": msg.sender_id == current_user.id,
-            "created_at": msg.created_at.strftime("%d %b %H:%M")
-        })
+        messages_data.append(
+            {
+                "id": msg.id,
+                "content": msg.content,
+                "sender_id": msg.sender_id,
+                "sender_name": msg.sender.display_name,
+                "is_own": msg.sender_id == current_user.id,
+                "created_at": msg.created_at.strftime("%d %b %H:%M"),
+            }
+        )
 
     return {"messages": messages_data}, 200
 
@@ -664,8 +735,7 @@ def profile(user_id: int):
     user = User.query.get_or_404(user_id)
 
     listings = (
-        Listing.query
-        .filter_by(seller_id=user.id, status="active")
+        Listing.query.filter_by(seller_id=user.id, status="active")
         .order_by(Listing.created_at.desc())
         .all()
     )
@@ -723,7 +793,7 @@ def unfollow(user_id: int):
     if next_page and next_page.startswith("/"):
         return redirect(next_page)
     # Check if coming from search page
-    if request.referrer and 'search' in request.referrer:
+    if request.referrer and "search" in request.referrer:
         return redirect(request.referrer)
     return redirect(url_for("main.profile", user_id=user.id))
 
@@ -733,33 +803,30 @@ def unfollow(user_id: int):
 def search():
     """Unified search page with tabs for users and listings."""
     from app.forms import SearchForm
+
     query = request.args.get("q", "").strip()
     form = SearchForm(request.args)
     form.category.choices = [("", "All Categories")] + LISTING_CATEGORIES
-    
+
     # Get users if query provided
     users = []
     users_pagination = None
     if query:
         from sqlalchemy import func
+
         search_pattern = f"%{query}%"
         users_query = (
-            User.query
-            .filter(
-                (func.lower(User.username).like(func.lower(search_pattern))) |
-                (func.lower(User.display_name).like(func.lower(search_pattern)))
+            User.query.filter(
+                (func.lower(User.username).like(func.lower(search_pattern)))
+                | (func.lower(User.display_name).like(func.lower(search_pattern)))
             )
             .filter(User.id != current_user.id)
             .order_by(User.username.asc() if User.username else User.display_name.asc())
         )
         page = request.args.get("page", 1, type=int)
-        users_pagination = users_query.paginate(
-            page=page,
-            per_page=20,
-            error_out=False
-        )
+        users_pagination = users_query.paginate(page=page, per_page=20, error_out=False)
         users = users_pagination.items
-    
+
     # Get listings if form submitted
     listings = []
     listings_pagination = None
@@ -767,27 +834,27 @@ def search():
         now = datetime.utcnow()
         listings_query = Listing.query.filter(
             Listing.status == "active",
-            (Listing.expires_at.is_(None)) | (Listing.expires_at > now)
+            (Listing.expires_at.is_(None)) | (Listing.expires_at > now),
         )
-        
+
         if form.query.data:
             search_term = f"%{form.query.data}%"
             listings_query = listings_query.filter(
-                (Listing.title.ilike(search_term)) |
-                (Listing.description.ilike(search_term))
+                (Listing.title.ilike(search_term))
+                | (Listing.description.ilike(search_term))
             )
-        
+
         if form.category.data:
             listings_query = listings_query.filter_by(category=form.category.data)
-        
+
         page = request.args.get("page", 1, type=int)
-        listings_pagination = listings_query.order_by(Listing.created_at.desc()).paginate(
-            page=page,
-            per_page=current_app.config["LISTINGS_PER_PAGE"],
-            error_out=False
+        listings_pagination = listings_query.order_by(
+            Listing.created_at.desc()
+        ).paginate(
+            page=page, per_page=current_app.config["LISTINGS_PER_PAGE"], error_out=False
         )
         listings = listings_pagination.items
-    
+
     return render_template(
         "search.html",
         users=users,
@@ -807,32 +874,30 @@ def search_users():
     """
     query = request.args.get("q", "").strip()
     page = request.args.get("page", 1, type=int)
-    
+
     if query:
         # Search users by username (case-insensitive, partial match)
         # Use func.lower for SQLite compatibility
         from sqlalchemy import func
+
         search_pattern = f"%{query}%"
         users_query = (
-            User.query
-            .filter(
-                (func.lower(User.username).like(func.lower(search_pattern))) |
-                (func.lower(User.display_name).like(func.lower(search_pattern)))
+            User.query.filter(
+                (func.lower(User.username).like(func.lower(search_pattern)))
+                | (func.lower(User.display_name).like(func.lower(search_pattern)))
             )
-            .filter(User.id != current_user.id if current_user.is_authenticated else True)  # Exclude current user if authenticated
+            .filter(
+                User.id != current_user.id if current_user.is_authenticated else True
+            )  # Exclude current user if authenticated
             .order_by(User.username.asc() if User.username else User.display_name.asc())
         )
-        
-        users_pagination = users_query.paginate(
-            page=page,
-            per_page=20,
-            error_out=False
-        )
+
+        users_pagination = users_query.paginate(page=page, per_page=20, error_out=False)
         users = users_pagination.items
     else:
         users = []
         users_pagination = None
-    
+
     return render_template(
         "search.html",
         users=users,
@@ -850,37 +915,35 @@ def search_listings():
     form = SearchForm(request.args)
     # Set category choices
     form.category.choices = [("", "All Categories")] + LISTING_CATEGORIES
-    
+
     page = request.args.get("page", 1, type=int)
     now = datetime.utcnow()
-    
+
     query = Listing.query.filter(
         Listing.status == "active",
-        (Listing.expires_at.is_(None)) | (Listing.expires_at > now)
+        (Listing.expires_at.is_(None)) | (Listing.expires_at > now),
     )
-    
+
     if form.query.data:
         search_term = f"%{form.query.data}%"
         query = query.filter(
-            (Listing.title.ilike(search_term)) |
-            (Listing.description.ilike(search_term))
+            (Listing.title.ilike(search_term))
+            | (Listing.description.ilike(search_term))
         )
-    
+
     if form.category.data:
         query = query.filter_by(category=form.category.data)
-    
+
     if form.min_price.data:
         query = query.filter(Listing.price >= form.min_price.data)
-    
+
     if form.max_price.data:
         query = query.filter(Listing.price <= form.max_price.data)
-    
+
     listings_pagination = query.order_by(Listing.created_at.desc()).paginate(
-        page=page,
-        per_page=current_app.config["LISTINGS_PER_PAGE"],
-        error_out=False
+        page=page, per_page=current_app.config["LISTINGS_PER_PAGE"], error_out=False
     )
-    
+
     return render_template(
         "search_listings.html",
         form=form,
@@ -896,18 +959,21 @@ def health_check():
     Health check endpoint for monitoring.
     """
     from flask import jsonify
+
     try:
         # Check database connection
         db.session.execute(db.text("SELECT 1"))
         db_status = "healthy"
     except Exception as e:
         db_status = f"unhealthy: {str(e)}"
-    
-    return jsonify({
-        "status": "ok" if db_status == "healthy" else "degraded",
-        "database": db_status,
-        "timestamp": datetime.utcnow().isoformat()
-    }), 200 if db_status == "healthy" else 503
+
+    return jsonify(
+        {
+            "status": "ok" if db_status == "healthy" else "degraded",
+            "database": db_status,
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+    ), (200 if db_status == "healthy" else 503)
 
 
 @main_bp.route("/following")
@@ -917,11 +983,9 @@ def following():
     Page that shows all users the current user is following.
     Visible only to the authenticated user.
     """
-    followed_users = (
-        current_user.followed
-        .order_by(User.username.asc() if User.username else User.display_name.asc())
-        .all()
-    )
+    followed_users = current_user.followed.order_by(
+        User.username.asc() if User.username else User.display_name.asc()
+    ).all()
     return render_template("following.html", users=followed_users)
 
 
@@ -933,7 +997,9 @@ def edit_profile():
     Allows changing display name, bio, and avatar image.
     """
     if request.method == "POST":
-        display_name = sanitize_input(request.form.get("display_name", ""), max_length=80)
+        display_name = sanitize_input(
+            request.form.get("display_name", ""), max_length=80
+        )
         bio = sanitize_input(request.form.get("bio", ""), max_length=500)
         avatar_file = request.files.get("avatar")
 
@@ -950,12 +1016,12 @@ def edit_profile():
 
         if avatar_file and avatar_file.filename:
             avatar_filename = save_uploaded_image(
-                avatar_file,
-                subdirectory="avatars",
-                prefix=f"avatar_{current_user.id}"
+                avatar_file, subdirectory="avatars", prefix=f"avatar_{current_user.id}"
             )
             if not avatar_filename:
-                errors.append("Failed to upload avatar. Please check the file type and size.")
+                errors.append(
+                    "Failed to upload avatar. Please check the file type and size."
+                )
 
         if errors:
             for msg in errors:
@@ -973,8 +1039,10 @@ def edit_profile():
             except Exception as e:
                 current_app.logger.error(f"Error updating profile: {str(e)}")
                 db.session.rollback()
-                flash("An error occurred while updating your profile. Please try again.", "error")
+                flash(
+                    "An error occurred while updating your profile. Please try again.",
+                    "error",
+                )
 
     # GET: show current values
     return render_template("edit_profile.html")
-

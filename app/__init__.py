@@ -29,7 +29,7 @@ csrf = CSRFProtect()
 limiter = Limiter(
     key_func=get_remote_address,
     default_limits=["200 per hour"],
-    storage_uri="memory://"
+    storage_uri="memory://",
 )
 mail = Mail()
 socketio = SocketIO(cors_allowed_origins="*")
@@ -54,6 +54,7 @@ def create_app(config_name=None):
 
     # Load configuration
     from app.config import config
+
     config_name = config_name or os.environ.get("FLASK_ENV", "default")
     app.config.from_object(config[config_name])
     config[config_name].init_app(app)
@@ -67,26 +68,29 @@ def create_app(config_name=None):
     # Initialize extensions
     db.init_app(app)
     login_manager.init_app(app)
-    
+
     # Configure Flask-Login to not regenerate session on login
     # This prevents CSRF token invalidation when logging in from multiple places
-    login_manager.session_protection = "basic"  # Instead of "strong" which regenerates session
-    
+    login_manager.session_protection = (
+        "basic"  # Instead of "strong" which regenerates session
+    )
+
     migrate.init_app(app, db)
     csrf.init_app(app)
     limiter.init_app(app)
     mail.init_app(app)
     cache.init_app(app)
-    socketio.init_app(app, cors_allowed_origins=app.config.get("SOCKETIO_CORS_ALLOWED_ORIGINS", "*"))
-    
+    socketio.init_app(
+        app, cors_allowed_origins=app.config.get("SOCKETIO_CORS_ALLOWED_ORIGINS", "*")
+    )
+
     # Make extensions available
-    app.extensions['limiter'] = limiter
+    app.extensions["limiter"] = limiter
 
     # Configure logging
     if not app.debug and not app.testing:
         logging.basicConfig(
-            level=logging.INFO,
-            format="%(asctime)s %(levelname)s %(name)s %(message)s"
+            level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s"
         )
         app.logger.setLevel(logging.INFO)
 
@@ -102,42 +106,47 @@ def create_app(config_name=None):
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
     app.register_blueprint(messages_bp)
-    
+
     # Apply rate limiting to specific routes after registration
     from functools import wraps
-    original_register = app.view_functions['auth.register']
-    original_login = app.view_functions['auth.login']
-    original_send_message = app.view_functions.get('main.send_message')
-    original_get_messages = app.view_functions.get('main.get_messages')
-    
+
+    original_register = app.view_functions["auth.register"]
+    original_login = app.view_functions["auth.login"]
+    original_send_message = app.view_functions.get("main.send_message")
+    original_get_messages = app.view_functions.get("main.get_messages")
+
     @wraps(original_register)
     @limiter.limit("5 per minute")
     def rate_limited_register(*args, **kwargs):
         return original_register(*args, **kwargs)
-    
+
     @wraps(original_login)
     @limiter.limit("10 per minute")
     def rate_limited_login(*args, **kwargs):
         return original_login(*args, **kwargs)
-    
-    app.view_functions['auth.register'] = rate_limited_register
-    app.view_functions['auth.login'] = rate_limited_login
-    
+
+    app.view_functions["auth.register"] = rate_limited_register
+    app.view_functions["auth.login"] = rate_limited_login
+
     if original_send_message:
+
         @wraps(original_send_message)
         @limiter.limit("30 per minute")
         def rate_limited_send_message(*args, **kwargs):
             return original_send_message(*args, **kwargs)
-        app.view_functions['main.send_message'] = rate_limited_send_message
-    
+
+        app.view_functions["main.send_message"] = rate_limited_send_message
+
     # Add rate limiting for message polling endpoint (higher limit for polling)
     # Polling happens every 2 seconds = 30 requests per minute, so 120 per minute gives buffer
     if original_get_messages:
+
         @wraps(original_get_messages)
         @limiter.limit("120 per minute")
         def rate_limited_get_messages(*args, **kwargs):
             return original_get_messages(*args, **kwargs)
-        app.view_functions['main.get_messages'] = rate_limited_get_messages
+
+        app.view_functions["main.get_messages"] = rate_limited_get_messages
 
     # User loader for Flask-Login
     @login_manager.user_loader
@@ -152,17 +161,20 @@ def create_app(config_name=None):
     def inject_unread_count():
         from flask_login import current_user
         from app.models import Message, Conversation
+
         unread_count = 0
         try:
             if current_user.is_authenticated:
                 # Count unread messages where current_user is the recipient
                 unread_count = (
-                    Message.query
-                    .join(Conversation)
+                    Message.query.join(Conversation)
                     .filter(
-                        ((Conversation.buyer_id == current_user.id) | (Conversation.seller_id == current_user.id)),
+                        (
+                            (Conversation.buyer_id == current_user.id)
+                            | (Conversation.seller_id == current_user.id)
+                        ),
                         Message.sender_id != current_user.id,
-                        Message.is_read == False
+                        Message.is_read == False,
                     )
                     .count()
                 )
@@ -176,34 +188,40 @@ def create_app(config_name=None):
     def set_security_headers(response):
         """Add security headers to all responses."""
         if not app.debug:
-            response.headers['X-Content-Type-Options'] = 'nosniff'
-            response.headers['X-Frame-Options'] = 'SAMEORIGIN'
-            response.headers['X-XSS-Protection'] = '1; mode=block'
-            response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+            response.headers["X-Content-Type-Options"] = "nosniff"
+            response.headers["X-Frame-Options"] = "SAMEORIGIN"
+            response.headers["X-XSS-Protection"] = "1; mode=block"
+            response.headers["Strict-Transport-Security"] = (
+                "max-age=31536000; includeSubDomains"
+            )
         return response
 
     # Error handlers
     @app.errorhandler(404)
     def not_found_error(error):
         from flask import render_template
+
         return render_template("errors/404.html"), 404
 
     @app.errorhandler(500)
     def internal_error(error):
         db.session.rollback()
         from flask import render_template
+
         app.logger.error(f"Internal server error: {str(error)}", exc_info=True)
         return render_template("errors/500.html"), 500
 
     @app.errorhandler(403)
     def forbidden_error(error):
         from flask import render_template
+
         return render_template("errors/403.html"), 403
 
     # Request size limit handler
     @app.errorhandler(413)
     def request_entity_too_large(error):
         from flask import flash, redirect, url_for, request
+
         flash("File too large. Please upload a smaller file.", "error")
         return redirect(request.referrer or url_for("main.index")), 413
 

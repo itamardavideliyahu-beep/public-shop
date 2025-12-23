@@ -93,6 +93,8 @@ jobs:
       - name: Run database migrations
         env:
           DATABASE_URL: postgresql://testuser:testpass@localhost:5432/testdb
+          SECRET_KEY: test-secret-key-for-ci-migrations
+          FLASK_ENV: testing
         run: |
           flask db upgrade
 
