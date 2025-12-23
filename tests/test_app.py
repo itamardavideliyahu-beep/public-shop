@@ -4,8 +4,9 @@ These tests don't require a running server.
 """
 
 import pytest
+
 from app import create_app, db
-from app.models import User, Listing
+from app.models import Listing, User
 
 
 @pytest.fixture

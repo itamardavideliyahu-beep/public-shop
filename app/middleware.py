@@ -4,6 +4,7 @@ Middleware and request handlers for the application.
 
 import logging
 import time
+
 from flask import g, request
 from flask_login import current_user
 
@@ -49,7 +50,7 @@ def setup_error_handlers(app):
     @app.errorhandler(429)
     def ratelimit_handler(e):
         """Handle rate limit exceeded errors."""
-        from flask import render_template, jsonify
+        from flask import jsonify, render_template
 
         if (
             request.is_json
@@ -70,7 +71,7 @@ def setup_error_handlers(app):
     @app.errorhandler(400)
     def bad_request_handler(e):
         """Handle bad request errors."""
-        from flask import render_template, jsonify
+        from flask import jsonify, render_template
 
         if (
             request.is_json

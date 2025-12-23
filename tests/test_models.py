@@ -2,10 +2,12 @@
 Comprehensive unit tests for database models.
 """
 
-import pytest
 from datetime import datetime, timedelta, timezone
+
+import pytest
+
 from app import create_app, db
-from app.models import User, Listing, Post, Conversation, Message, EmailVerification
+from app.models import Conversation, EmailVerification, Listing, Message, Post, User
 
 
 @pytest.fixture
@@ -70,9 +72,11 @@ class TestUserModel:
             user1 = User(
                 email="user1@test.com", display_name="User 1", username="user1"
             )
+            user1.set_password("password123")
             user2 = User(
                 email="user2@test.com", display_name="User 2", username="user2"
             )
+            user2.set_password("password123")
 
             db.session.add_all([user1, user2])
             db.session.commit()
@@ -92,6 +96,7 @@ class TestUserModel:
         """Test that email must be unique."""
         with app.app_context():
             user1 = User(email="test@test.com", display_name="User 1")
+            user1.set_password("password123")
             db.session.add(user1)
             db.session.commit()
 
@@ -109,6 +114,7 @@ class TestListingModel:
         """Test creating a new listing."""
         with app.app_context():
             user = User(email="seller@test.com", display_name="Seller")
+            user.set_password("password123")
             db.session.add(user)
             db.session.commit()
 
@@ -133,10 +139,13 @@ class TestListingModel:
         """Test listing expiration date."""
         with app.app_context():
             user = User(email="seller@test.com", display_name="Seller")
+            user.set_password("password123")
             db.session.add(user)
             db.session.commit()
 
-            expires_at = datetime.now(timezone.utc) + timedelta(days=30)
+            # Use naive datetime for compatibility with SQLite
+            now = datetime.utcnow()
+            expires_at = now + timedelta(days=30)
             listing = Listing(
                 seller=user,
                 title="Expiring Item",
@@ -148,12 +157,14 @@ class TestListingModel:
             db.session.commit()
 
             assert listing.expires_at is not None
-            assert listing.expires_at > datetime.now(timezone.utc)
+            # Compare with the same naive datetime
+            assert listing.expires_at > now
 
     def test_free_listing(self, app):
         """Test free listing (giveaway)."""
         with app.app_context():
             user = User(email="seller@test.com", display_name="Seller")
+            user.set_password("password123")
             db.session.add(user)
             db.session.commit()
 
@@ -178,7 +189,9 @@ class TestConversationModel:
         """Test creating a conversation."""
         with app.app_context():
             buyer = User(email="buyer@test.com", display_name="Buyer")
+            buyer.set_password("password123")
             seller = User(email="seller@test.com", display_name="Seller")
+            seller.set_password("password123")
             db.session.add_all([buyer, seller])
             db.session.commit()
 
@@ -199,7 +212,9 @@ class TestConversationModel:
         """Test creating messages in a conversation."""
         with app.app_context():
             buyer = User(email="buyer@test.com", display_name="Buyer")
+            buyer.set_password("password123")
             seller = User(email="seller@test.com", display_name="Seller")
+            seller.set_password("password123")
             db.session.add_all([buyer, seller])
             db.session.commit()
 

@@ -1,10 +1,10 @@
-import uuid
 import random
+import uuid
 
 from playwright.sync_api import sync_playwright
 
 from app import create_app, db
-from app.models import User, Listing
+from app.models import Listing, User
 
 BASE_URL = "http://127.0.0.1:5000"
 
@@ -192,8 +192,9 @@ def test_conversations_inbox():
     listing = create_db_listing_for_seller(seller)
 
     # Create a conversation and message in the database
-    from app.models import Conversation, Message
     from datetime import datetime
+
+    from app.models import Conversation, Message
 
     conversation = Conversation(
         buyer=buyer,
