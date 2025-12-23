@@ -1,5 +1,6 @@
 # Redis Container Instance (Private IP, no public DNS, using ACR image)
 resource "azurerm_container_group" "redis" {
+  count = var.deploy_database_containers ? 1 : 0
   name                = "aci-redis-${var.project_name}-${var.environment}"
   location            = azurerm_resource_group.main.location
   resource_group_name = azurerm_resource_group.main.name
@@ -10,7 +11,7 @@ resource "azurerm_container_group" "redis" {
 
   container {
     name   = "redis"
-    image  = "${azurerm_container_registry.main.login_server}/redis:7"
+    image  = "redis:7-alpine"  # Use official Docker Hub image
     cpu    = "0.25"
     memory = "0.5"
 
@@ -27,18 +28,6 @@ resource "azurerm_container_group" "redis" {
       "redis-server --requirepass ${random_password.redis_password.result}"
     ]
   }
-
-  # Registry credentials for ACR
-  image_registry_credential {
-    server   = azurerm_container_registry.main.login_server
-    username = azurerm_container_registry.main.admin_username
-    password = azurerm_container_registry.main.admin_password
-  }
-
-  # Ensure ACR exists before creating container
-  depends_on = [
-    azurerm_container_registry.main
-  ]
 
   tags = var.tags
 }

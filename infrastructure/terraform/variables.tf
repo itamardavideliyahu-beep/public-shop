@@ -4,6 +4,18 @@ variable "environment" {
   default     = "poc"
 }
 
+variable "deploy_app_container" {
+  description = "Whether to deploy the app container (set to false until Docker image is built by CI/CD)"
+  type        = bool
+  default     = false
+}
+
+variable "deploy_database_containers" {
+  description = "Whether to deploy database and redis containers (set to false if having issues with Docker Hub)"
+  type        = bool
+  default     = false
+}
+
 variable "location" {
   description = "Azure region for resources"
   type        = string
@@ -102,7 +114,14 @@ variable "tags" {
     Environment = "poc"
     Project     = "public-shop"
     ManagedBy   = "Terraform"
-    Owner       = "you"
+    Owner       = "DevOps"
+    CostCenter  = "Engineering"
+    Compliance  = "Standard"
+  }
+  
+  validation {
+    condition     = contains(keys(var.tags), "Environment")
+    error_message = "Tags must include an 'Environment' key."
   }
 }
 
@@ -129,5 +148,44 @@ variable "tenant_id" {
   description = "Azure tenant ID"
   type        = string
   sensitive   = false
+}
+
+# Email Configuration Variables
+variable "mail_username" {
+  description = "Email username for sending notifications (e.g., your-email@gmail.com)"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "mail_password" {
+  description = "Email password or app-specific password (use Gmail App Password, not regular password!)"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "mail_server" {
+  description = "SMTP server for email"
+  type        = string
+  default     = "smtp.gmail.com"
+}
+
+variable "mail_port" {
+  description = "SMTP port for email"
+  type        = number
+  default     = 587
+}
+
+variable "mail_use_tls" {
+  description = "Use TLS for email connections"
+  type        = bool
+  default     = true
+}
+
+variable "mail_default_sender" {
+  description = "Default sender email address"
+  type        = string
+  default     = "noreply@publicshop.com"
 }
 

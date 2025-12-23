@@ -15,7 +15,7 @@ locals {
 
   # Redis URL for Container Instance (with password from Key Vault)
   redis_protocol = var.redis_use_ssl ? "rediss" : "redis"
-  redis_host_ip  = azurerm_container_group.redis.ip_address
+  redis_host_ip  = var.deploy_database_containers ? azurerm_container_group.redis[0].ip_address : var.redis_host
   # Password will be injected via app_settings REDIS_PASSWORD, URL constructed in app
   # URL encode the password to handle special characters
   redis_url = "${local.redis_protocol}://:${urlencode(random_password.redis_password.result)}@${local.redis_host_ip}:${var.redis_port}/0"

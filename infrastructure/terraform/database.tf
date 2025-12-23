@@ -7,6 +7,7 @@ resource "azurerm_storage_share" "postgres_data" {
 
 # PostgreSQL Container Instance
 resource "azurerm_container_group" "postgres" {
+  count = var.deploy_database_containers ? 1 : 0
   name                = "aci-postgres-${var.project_name}-${var.environment}"
   location            = azurerm_resource_group.main.location
   resource_group_name = azurerm_resource_group.main.name
@@ -17,7 +18,7 @@ resource "azurerm_container_group" "postgres" {
 
   container {
     name   = "postgres"
-    image  = "${azurerm_container_registry.main.login_server}/postgres:15-alpine"
+    image  = "postgres:15-alpine"  # Use official Docker Hub image
     cpu    = "0.5"
     memory = "1.0"
 
@@ -36,18 +37,6 @@ resource "azurerm_container_group" "postgres" {
     # Note: Using ephemeral storage for POC. For production, use Azure Database for PostgreSQL
     # or mount Azure File Share with proper permissions
   }
-
-  # Registry credentials for ACR
-  image_registry_credential {
-    server   = azurerm_container_registry.main.login_server
-    username = azurerm_container_registry.main.admin_username
-    password = azurerm_container_registry.main.admin_password
-  }
-
-  # Ensure ACR exists before creating container
-  depends_on = [
-    azurerm_container_registry.main
-  ]
 
   tags = var.tags
 }

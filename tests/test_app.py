@@ -85,3 +85,4 @@ def test_listing_model():
     assert listing.category == "electronics"
     assert listing.status == "active"
 
+

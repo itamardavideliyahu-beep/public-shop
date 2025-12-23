@@ -1,5 +1,7 @@
 # Main Application Container Instance
+# Note: This will be deployed after CI/CD pipeline builds the Docker image
 resource "azurerm_container_group" "app" {
+  count = var.deploy_app_container ? 1 : 0
   name                = "aci-app-${var.project_name}-${var.environment}"
   location            = azurerm_resource_group.main.location
   resource_group_name = azurerm_resource_group.main.name
@@ -30,12 +32,12 @@ resource "azurerm_container_group" "app" {
       POSTGRES_USER     = "psqladmin"
       POSTGRES_PASSWORD = random_password.postgres_password.result
       POSTGRES_DB       = "public_shop"
-      POSTGRES_HOST     = azurerm_container_group.postgres.ip_address
+      POSTGRES_HOST     = var.deploy_database_containers ? azurerm_container_group.postgres[0].ip_address : "localhost"
       POSTGRES_PORT     = "5432"
-      DATABASE_URL      = "postgresql://psqladmin:${random_password.postgres_password.result}@${azurerm_container_group.postgres.ip_address}:5432/public_shop"
+      DATABASE_URL      = var.deploy_database_containers ? "postgresql://psqladmin:${random_password.postgres_password.result}@${azurerm_container_group.postgres[0].ip_address}:5432/public_shop" : "sqlite:///app.db"
 
       # Redis Configuration (Container Instance)
-      REDIS_HOST            = azurerm_container_group.redis.ip_address
+      REDIS_HOST            = var.deploy_database_containers ? azurerm_container_group.redis[0].ip_address : "localhost"
       REDIS_PORT            = "6379"
       REDIS_PASSWORD        = random_password.redis_password.result
       RATELIMIT_STORAGE_URL = local.redis_url
@@ -61,6 +63,14 @@ resource "azurerm_container_group" "app" {
       POSTS_PER_PAGE         = "20"
       LISTINGS_PER_PAGE      = "20"
       CONVERSATIONS_PER_PAGE = "20"
+
+      # Email Configuration
+      MAIL_SERVER         = var.mail_server
+      MAIL_PORT           = tostring(var.mail_port)
+      MAIL_USE_TLS        = tostring(var.mail_use_tls)
+      MAIL_USERNAME       = var.mail_username != "" ? azurerm_key_vault_secret.mail_username.value : ""
+      MAIL_PASSWORD       = var.mail_password != "" ? azurerm_key_vault_secret.mail_password.value : ""
+      MAIL_DEFAULT_SENDER = var.mail_default_sender
     }
   }
 

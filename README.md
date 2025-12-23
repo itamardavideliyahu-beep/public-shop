@@ -1,23 +1,54 @@
-# Public Shop
+# Public Shop 🛍️
 
-A social marketplace web application built with Flask.
+[![CI Pipeline](https://github.com/YOUR_USERNAME/public-shop/actions/workflows/ci.yml/badge.svg)](https://github.com/YOUR_USERNAME/public-shop/actions/workflows/ci.yml)
+[![Security Scan](https://github.com/YOUR_USERNAME/public-shop/actions/workflows/security-scan.yml/badge.svg)](https://github.com/YOUR_USERNAME/public-shop/actions/workflows/security-scan.yml)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-## Features
+A modern, secure, and scalable social marketplace web application built with Flask and deployed on Azure.
 
-- User authentication with email verification
-- Social feed with posts and stories
-- Marketplace listings with categories
-- Private messaging system
-- User profiles and following system
-- Real-time chat with WebSockets
+## ✨ Features
 
-## Tech Stack
+### Core Functionality
+- 🔐 **User Authentication** - Secure registration with email verification
+- 📝 **Social Feed** - Share posts and stories with the community
+- 🏪 **Marketplace** - Create and browse listings with categories
+- 💬 **Real-time Messaging** - WebSocket-powered chat system
+- 👥 **Social Features** - Follow users, view profiles
+- 🔍 **Advanced Search** - Find users and listings easily
+- 🎁 **Free Listings** - Support for giveaways and free items
 
-- **Backend**: Flask 3.1.2, Python 3.11+
-- **Database**: PostgreSQL (production), SQLite (development)
-- **Cache**: Redis
-- **Web Server**: Gunicorn
-- **Frontend**: Bootstrap 5
+### Technical Features
+- ⚡ **High Performance** - Redis caching and optimized queries
+- 🔒 **Security First** - CSRF protection, rate limiting, security headers
+- 📊 **Monitoring** - Application Insights integration
+- 🐳 **Containerized** - Docker support for easy deployment
+- 🚀 **CI/CD** - Automated testing and deployment
+- 🏗️ **Infrastructure as Code** - Terraform for Azure resources
+
+## 🛠️ Tech Stack
+
+### Backend
+- **Framework**: Flask 3.1.2
+- **Language**: Python 3.11+
+- **Database**: PostgreSQL 15 (SQLite for development)
+- **Cache**: Redis 7
+- **WSGI Server**: Gunicorn with Eventlet workers
+- **ORM**: SQLAlchemy 2.0
+- **Migrations**: Alembic (Flask-Migrate)
+
+### Frontend
+- **UI Framework**: Bootstrap 5
+- **Template Engine**: Jinja2
+- **Real-time**: Socket.IO
+
+### Infrastructure
+- **Cloud Provider**: Microsoft Azure
+- **Container Platform**: Azure Container Instances
+- **Container Registry**: Azure Container Registry
+- **Monitoring**: Application Insights
+- **Secrets Management**: Azure Key Vault
+- **Storage**: Azure Blob Storage
+- **IaC**: Terraform
 
 ## Quick Start
 
@@ -111,8 +142,105 @@ Required environment variables (see `.env.example`):
 
 לפרטים נוספים, ראה [תיעוד התשתית](docs/INFRASTRUCTURE.md)
 
-## License
+## 📊 Project Structure
 
-[Your License Here]
+```
+public-shop/
+├── app/                    # Application code
+│   ├── routes/            # Route blueprints
+│   ├── templates/         # Jinja2 templates
+│   ├── static/            # Static files
+│   ├── models.py          # Database models
+│   ├── config.py          # Configuration
+│   └── utils.py           # Utility functions
+├── infrastructure/        # Infrastructure as Code
+│   ├── terraform/         # Terraform configurations
+│   └── scripts/           # Deployment scripts
+├── tests/                 # Test suite
+├── migrations/            # Database migrations
+├── docs/                  # Documentation
+└── .github/workflows/     # CI/CD pipelines
+```
+
+## 🤝 Contributing
+
+We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for details.
+
+### Development Process
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Make your changes
+4. Run tests (`pytest`)
+5. Commit your changes (`git commit -m 'feat: add amazing feature'`)
+6. Push to the branch (`git push origin feature/amazing-feature`)
+7. Open a Pull Request
+
+## 📖 Documentation
+
+- **[Architecture](ARCHITECTURE.md)** - System architecture and design
+- **[Contributing](CONTRIBUTING.md)** - Contribution guidelines
+- **[Deployment Checklist](DEPLOYMENT_CHECKLIST.md)** - Pre-deployment checklist
+- **[Changelog](CHANGELOG.md)** - Version history
+- **[Docs Folder](docs/)** - Complete documentation
+
+## 🔒 Security
+
+- Security headers (CSP, HSTS, X-Frame-Options)
+- CSRF protection
+- Rate limiting
+- Input validation and sanitization
+- SQL injection prevention (SQLAlchemy ORM)
+- XSS protection (Jinja2 auto-escaping)
+- Secure password hashing (PBKDF2)
+- Regular security scanning (Trivy, Bandit, Gitleaks)
+
+For security issues, please see [SECURITY.md](SECURITY.md) or contact security@example.com
+
+## 📈 Monitoring & Observability
+
+- Application Insights for performance monitoring
+- Automated alerts for critical metrics
+- Centralized logging with Log Analytics
+- Health check endpoints
+- Error tracking and reporting
+
+## 🧪 Testing
+
+```bash
+# Run all tests
+pytest
+
+# Run with coverage
+pytest --cov=app --cov-report=html
+
+# Run specific test file
+pytest tests/test_models.py
+
+# Run linting
+flake8 app/
+black --check app/
+isort --check-only app/
+```
+
+## 📝 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 👏 Acknowledgments
+
+- Flask and its amazing ecosystem
+- Azure for cloud infrastructure
+- All contributors and maintainers
+
+## 📞 Support
+
+- 📧 Email: support@example.com
+- 🐛 Issues: [GitHub Issues](https://github.com/YOUR_USERNAME/public-shop/issues)
+- 💬 Discussions: [GitHub Discussions](https://github.com/YOUR_USERNAME/public-shop/discussions)
+
+---
+
+Made with ❤️ by the Public Shop team
 
 

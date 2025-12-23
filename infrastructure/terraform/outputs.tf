@@ -10,32 +10,32 @@ output "resource_group_location" {
 
 output "app_container_name" {
   description = "Name of the App Container Instance"
-  value       = azurerm_container_group.app.name
+  value       = var.deploy_app_container ? azurerm_container_group.app[0].name : "Not deployed yet - run CI/CD pipeline first"
 }
 
 output "app_container_ip" {
   description = "IP address of the App Container Instance"
-  value       = azurerm_container_group.app.ip_address
+  value       = var.deploy_app_container ? azurerm_container_group.app[0].ip_address : null
 }
 
 output "app_container_fqdn" {
   description = "FQDN of the App Container Instance"
-  value       = azurerm_container_group.app.fqdn
+  value       = var.deploy_app_container ? azurerm_container_group.app[0].fqdn : null
 }
 
 output "app_service_url" {
   description = "URL of the App Container Instance"
-  value       = "http://${azurerm_container_group.app.fqdn}:8000"
+  value       = var.deploy_app_container ? "http://${azurerm_container_group.app[0].fqdn}:8000" : "Not deployed yet - run CI/CD pipeline first"
 }
 
 output "postgresql_container_name" {
   description = "Name of the PostgreSQL container instance"
-  value       = azurerm_container_group.postgres.name
+  value       = var.deploy_database_containers ? azurerm_container_group.postgres[0].name : "Not deployed yet"
 }
 
 output "postgresql_container_ip" {
   description = "IP address of the PostgreSQL container instance"
-  value       = azurerm_container_group.postgres.ip_address
+  value       = var.deploy_database_containers ? azurerm_container_group.postgres[0].ip_address : null
 }
 
 output "postgresql_database_name" {
@@ -93,16 +93,16 @@ output "application_insights_connection_string" {
 
 output "redis_container_ip" {
   description = "IP address of the Redis container instance"
-  value       = azurerm_container_group.redis.ip_address
+  value       = var.deploy_database_containers ? azurerm_container_group.redis[0].ip_address : null
 }
 
 output "redis_container_fqdn" {
   description = "FQDN of the Redis container instance (null if no DNS label)"
-  value       = try(azurerm_container_group.redis.fqdn, null)
+  value       = var.deploy_database_containers ? try(azurerm_container_group.redis[0].fqdn, null) : null
 }
 
 output "redis_container_name" {
   description = "Name of the Redis container instance"
-  value       = azurerm_container_group.redis.name
+  value       = var.deploy_database_containers ? azurerm_container_group.redis[0].name : "Not deployed yet"
 }
 

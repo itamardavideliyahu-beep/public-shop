@@ -85,16 +85,20 @@ resource "azurerm_key_vault_secret" "redis_password" {
   depends_on = [azurerm_key_vault_access_policy.current_user]
 }
 
-# Secret for email configuration (to be set manually or via CI/CD)
-# resource "azurerm_key_vault_secret" "mail_username" {
-#   name         = "mail-username"
-#   value        = "your-email@gmail.com"
-#   key_vault_id = azurerm_key_vault.main.id
-# }
+# Email credentials in Key Vault
+resource "azurerm_key_vault_secret" "mail_username" {
+  name         = "mail-username"
+  value        = var.mail_username
+  key_vault_id = azurerm_key_vault.main.id
 
-# resource "azurerm_key_vault_secret" "mail_password" {
-#   name         = "mail-password"
-#   value        = "your-app-password"
-#   key_vault_id = azurerm_key_vault.main.id
-# }
+  depends_on = [azurerm_key_vault_access_policy.current_user]
+}
+
+resource "azurerm_key_vault_secret" "mail_password" {
+  name         = "mail-password"
+  value        = var.mail_password
+  key_vault_id = azurerm_key_vault.main.id
+
+  depends_on = [azurerm_key_vault_access_policy.current_user]
+}
 

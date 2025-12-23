@@ -79,6 +79,8 @@ app/static/uploads/**/*
 *.tfstate.*
 .terraform.lock.hcl
 terraform.tfvars
+secrets.tfvars
+*-secrets.tfvars
 tfplan
 
 # Azure

@@ -1,6 +1,7 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from flask_login import UserMixin
+from sqlalchemy import Index
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from app import db
@@ -57,7 +58,7 @@ class User(db.Model, UserMixin):
 
     created_at = db.Column(
         db.DateTime,
-        default=datetime.utcnow,
+        default=lambda: datetime.now(timezone.utc),
         nullable=False,
     )
 
@@ -283,6 +284,11 @@ class Conversation(db.Model):
     """
 
     __tablename__ = "conversations"
+    
+    # Add composite unique constraint to prevent duplicate conversations
+    __table_args__ = (
+        Index('idx_conversation_participants', 'buyer_id', 'seller_id', 'listing_id'),
+    )
 
     id = db.Column(db.Integer, primary_key=True)
 
@@ -309,13 +315,14 @@ class Conversation(db.Model):
 
     created_at = db.Column(
         db.DateTime,
-        default=datetime.utcnow,
+        default=lambda: datetime.now(timezone.utc),
         nullable=False,
     )
 
     updated_at = db.Column(
         db.DateTime,
-        default=datetime.utcnow,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
         nullable=False,
     )
 
@@ -427,7 +434,7 @@ class EmailVerification(db.Model):
 
     created_at = db.Column(
         db.DateTime,
-        default=datetime.utcnow,
+        default=lambda: datetime.now(timezone.utc),
         nullable=False,
     )
 
