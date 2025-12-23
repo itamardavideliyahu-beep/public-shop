@@ -191,13 +191,13 @@ def create_app(config_name=None):
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "SAMEORIGIN"
         response.headers["X-XSS-Protection"] = "1; mode=block"
-        
+
         # Only add HSTS in production with HTTPS
         if not app.debug and app.config.get("SESSION_COOKIE_SECURE"):
             response.headers["Strict-Transport-Security"] = (
                 "max-age=31536000; includeSubDomains"
             )
-        
+
         # Content Security Policy
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; "
@@ -208,15 +208,15 @@ def create_app(config_name=None):
             "connect-src 'self'; "
             "frame-ancestors 'self'"
         )
-        
+
         # Referrer Policy
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-        
+
         # Permissions Policy
         response.headers["Permissions-Policy"] = (
             "geolocation=(), microphone=(), camera=()"
         )
-        
+
         return response
 
     # Error handlers

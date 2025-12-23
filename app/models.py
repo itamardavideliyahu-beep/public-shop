@@ -284,10 +284,10 @@ class Conversation(db.Model):
     """
 
     __tablename__ = "conversations"
-    
+
     # Add composite unique constraint to prevent duplicate conversations
     __table_args__ = (
-        Index('idx_conversation_participants', 'buyer_id', 'seller_id', 'listing_id'),
+        Index("idx_conversation_participants", "buyer_id", "seller_id", "listing_id"),
     )
 
     id = db.Column(db.Integer, primary_key=True)

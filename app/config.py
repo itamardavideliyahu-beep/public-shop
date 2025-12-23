@@ -102,7 +102,7 @@ class Config:
     PERMANENT_SESSION_LIFETIME = int(
         os.environ.get("SESSION_LIFETIME", 86400)
     )  # 24 hours
-    
+
     # Additional security headers
     SEND_FILE_MAX_AGE_DEFAULT = 31536000  # 1 year for static files
 
