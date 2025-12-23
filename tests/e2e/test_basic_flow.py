@@ -9,7 +9,7 @@ from app.models import User, Listing
 BASE_URL = "http://127.0.0.1:5000"
 
 # Create an application context so we can talk to the same database
-app = create_app()
+app, socketio = create_app()
 app.app_context().push()
 
 # Make sure all tables exist before tests run (extra safety).

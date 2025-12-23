@@ -97,6 +97,7 @@ def create_app(config_name=None):
     # Import models so that SQLAlchemy is aware of them
     from app import models  # noqa: F401
     from app.models import User  # noqa: F401
+
     # Register blueprints
     from app.routes.auth import auth_bp
     from app.routes.main import main_bp
